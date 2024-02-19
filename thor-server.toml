@@ -1,0 +1,12 @@
+[thor]
+remote_packet_queue_cycle = 250
+
+[amd]
+core = true
+pkg = true
+
+[intel]
+pp0 = true
+pp1 = true
+pkg = true
+dram = true
