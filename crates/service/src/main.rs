@@ -2,12 +2,19 @@ use anyhow::Result;
 use crossbeam::queue::SegQueue;
 use serde::{Deserialize, Serialize};
 use std::{
+    fs,
     io::Write,
     sync::{Arc, Mutex},
+    thread,
+    time::{Duration, SystemTime},
 };
+use sysinfo::{ProcessRefreshKind, System, MINIMUM_CPU_UPDATE_INTERVAL};
 use thor_lib::{read_rapl_msr_power_unit, read_rapl_msr_registers, RaplMeasurement};
-use thor_shared::LocalClientPacketEnum;
-use tokio::{io::AsyncReadExt, net::TcpListener};
+use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation, LocalOperation};
+use tokio::{
+    io::AsyncReadExt,
+    net::{TcpListener, TcpStream},
+};
 
 //pub const CONFIG: bincode::config::Configuration = bincode::config::standard();
 
@@ -37,10 +44,18 @@ struct ThorConfig {
     remote_packet_queue_cycle: u64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct RemotePacket {
+    local_client_packet: LocalClientPacket,
+    local_client_packet_operation: LocalClientPacketOperation,
+    rapl_measurement: RaplMeasurement,
+    timestamp: u128,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Load the config file
-    let config_file_data = std::fs::read_to_string("thor-server.toml")?;
+    let config_file_data = fs::read_to_string("thor-service.toml")?;
     let config: Config = toml::from_str(&config_file_data)?;
 
     // Create a TCP listener
@@ -53,7 +68,7 @@ async fn main() -> Result<()> {
     // Create a clone of the remote_tcpstreams and the rapl_stuff_queue to pass to the thread
     let remote_tcpstreams_clone = remote_tcpstreams.clone();
     let rapl_stuff_queue_clone = rapl_stuff_queue.clone();
-    std::thread::spawn(move || {
+    thread::spawn(move || {
         send_packet_to_remote_clients(rapl_stuff_queue_clone, remote_tcpstreams_clone, &config);
     });
 
@@ -63,58 +78,36 @@ async fn main() -> Result<()> {
         println!("Accepted connection");
 
         // Read the connection type
-        let connection_type = socket.read_i8().await.unwrap();
+        let connection_type = socket.read_u8().await.unwrap();
 
         let rapl_stuff_queue_clone = rapl_stuff_queue.clone();
 
-        if connection_type == 0 {
+        if connection_type == ConnectionType::Local as u8 {
             // Local connection
+
             tokio::spawn(async move {
                 let mut client_buffer = vec![0; 100];
 
                 loop {
-                    // TOOD: Add extra handling for getting rapl registers on "stop rapl", so first byte could be 1 then do reading immediately.
-                    // this would be before reading length of packet
-                    let priority_measure_rapl = 0;
+                    let start_or_stop = socket.read_u8().await.unwrap();
 
-                    let packet_length = socket.read_u8().await.unwrap();
-
-                    println!("Got packet with len: {}", packet_length);
-
-                    // Read packet_length bytes from the socket
-                    socket
-                        .read_exact(&mut client_buffer[0..packet_length as usize])
+                    if start_or_stop == LocalOperation::Start as u8 {
+                        handle_start_rapl_packet(
+                            &mut socket,
+                            &mut client_buffer,
+                            &rapl_stuff_queue_clone,
+                            LocalClientPacketOperation::Start,
+                        )
                         .await
-                        .unwrap();
-
-                    let packet: LocalClientPacketEnum =
-                        bincode::deserialize(&client_buffer).unwrap();
-
-                    let rapl_measurement = read_rapl_msr_registers();
-
-                    let remote_packet = RemotePacket {
-                        id: match packet {
-                            LocalClientPacketEnum::StartRaplPacket(ref start_rapl_packet) => {
-                                start_rapl_packet.id.clone()
-                            }
-                            LocalClientPacketEnum::StopRaplPacket(ref stop_rapl_packet) => {
-                                stop_rapl_packet.id.clone()
-                            }
-                        },
-                        process_id: 123,
-                        thread_id: match packet {
-                            LocalClientPacketEnum::StartRaplPacket(ref start_rapl_packet) => {
-                                start_rapl_packet.thread_id
-                            }
-                            LocalClientPacketEnum::StopRaplPacket(ref stop_rapl_packet) => {
-                                stop_rapl_packet.thread_id
-                            }
-                        },
-                        rapl_measurement,
-                        timestamp: 123,
-                    };
-
-                    rapl_stuff_queue_clone.push(remote_packet);
+                    } else {
+                        handle_stop_rapl_packet(
+                            &mut socket,
+                            &mut client_buffer,
+                            &rapl_stuff_queue_clone,
+                            LocalClientPacketOperation::Stop,
+                        )
+                        .await
+                    }
 
                     /*let n = match socket.read(&mut buf).await {
                         Ok(n) if n == 0 => return,
@@ -156,38 +149,201 @@ async fn main() -> Result<()> {
     // Get the data sent from the RAPL library
 
     // Loop as designed for macrobenchmarks
-    loop {
-        let testy = read_rapl_msr_registers();
-        println!("{:?}", testy);
+    //loop {
+    //let testy = read_rapl_msr_registers();
+    //println!("{:?}", testy);
 
-        /*
-        let mut data = [0; 100];
-        println!("Reading data from RAPL library... 1");
-        stream.read_exact(&mut data).unwrap();
-        println!("Data length {}", data.len());
-        println!("Data {:?}", data);
-        println!("Finished reading data from RAPL library... 1");
-        */
+    /*
+    let mut data = [0; 100];
+    println!("Reading data from RAPL library... 1");
+    stream.read_exact(&mut data).unwrap();
+    println!("Data length {}", data.len());
+    println!("Data {:?}", data);
+    println!("Finished reading data from RAPL library... 1");
+    */
 
-        //let output: OutputData = bincode::serde::decode_from_std_read(&mut stream, CONFIG).unwrap();
-        //println!("{:?}", output);
-        //println!("{:?}", output);
+    //let output: OutputData = bincode::serde::decode_from_std_read(&mut stream, CONFIG).unwrap();
+    //println!("{:?}", output);
+    //println!("{:?}", output);
 
-        // Sleep for 10 milliseconds
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
+    // Sleep for 10 milliseconds
+    //std::thread::sleep(std::time::Duration::from_millis(10));
+    //}
+}
+
+fn get_timestamp_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+}
+
+async fn handle_start_rapl_packet(
+    socket: &mut TcpStream,
+    client_buffer: &mut Vec<u8>,
+    rapl_stuff_queue_clone: &Arc<
+        SegQueue<(
+            RaplMeasurement,
+            u128,
+            LocalClientPacket,
+            LocalClientPacketOperation,
+        )>,
+    >,
+    local_client_packet_operation: LocalClientPacketOperation,
+) {
+    // Get the local client packet
+    let local_client_packet = get_dat_local_client_packet_yo(socket, client_buffer).await;
+
+    // Get the timestamp as milliseconds
+    let timestamp = get_timestamp_millis();
+
+    // Read the RAPL registers at the end to prioritize energy measurements
+    let rapl_measurement = read_rapl_msr_registers();
+
+    // Push the data to the rapl_stuff_queue
+    rapl_stuff_queue_clone.push((
+        rapl_measurement,
+        timestamp,
+        local_client_packet,
+        local_client_packet_operation,
+    ));
+}
+
+async fn handle_stop_rapl_packet(
+    socket: &mut TcpStream,
+    client_buffer: &mut Vec<u8>,
+    rapl_stuff_queue_clone: &Arc<
+        SegQueue<(
+            RaplMeasurement,
+            u128,
+            LocalClientPacket,
+            LocalClientPacketOperation,
+        )>,
+    >,
+    local_client_packet_operation: LocalClientPacketOperation,
+) {
+    // Read the RAPL registers at the start to prioritize energy measurements
+    let rapl_measurement = read_rapl_msr_registers();
+
+    // Get the timestamp as milliseconds
+    let timestamp = get_timestamp_millis();
+
+    // Get the local client packet
+    let local_client_packet = get_dat_local_client_packet_yo(socket, client_buffer).await;
+
+    // Push the data to the rapl_stuff_queue
+    rapl_stuff_queue_clone.push((
+        rapl_measurement,
+        timestamp,
+        local_client_packet,
+        local_client_packet_operation,
+    ));
+}
+
+async fn get_dat_local_client_packet_yo(
+    socket: &mut TcpStream,
+    client_buffer: &mut Vec<u8>,
+) -> LocalClientPacket {
+    let packet_length = socket.read_u8().await.unwrap();
+
+    println!("Got packet with len: {}", packet_length);
+
+    // Read packet_length bytes from the socket
+    socket
+        .read_exact(&mut client_buffer[0..packet_length as usize])
+        .await
+        .unwrap();
+
+    bincode::deserialize(&client_buffer).unwrap()
 }
 
 fn send_packet_to_remote_clients(
-    remote_packet_queue: Arc<SegQueue<RemotePacket>>,
+    remote_packet_queue: Arc<
+        SegQueue<(
+            RaplMeasurement,
+            u128,
+            LocalClientPacket,
+            LocalClientPacketOperation,
+        )>,
+    >,
     remote_connections: Arc<Mutex<Vec<std::net::TcpStream>>>,
     config: &Config,
 ) {
-    loop {
-        // TODO: Get all processes and their CPU usage
+    // Create duration from the config
+    let duration = Duration::from_millis(config.thor.remote_packet_queue_cycle);
 
-        // loop over the remote packet queue, pop them and print them
-        while let Some(remote_packet) = remote_packet_queue.pop() {
+    // Check if the duration is less than the minimum update interval
+    if duration < MINIMUM_CPU_UPDATE_INTERVAL {
+        panic!(
+            "Remote packet queue cycle must be greater than the minimum update interval of {:?}",
+            sysinfo::MINIMUM_CPU_UPDATE_INTERVAL
+        );
+    }
+
+    // Create a system and refresh it
+    // TODO: Maybe move this into the main function initially,
+    // and then pass it to this function, to prevent receiving packets before it is ready
+    let mut sys = System::new_all();
+    sys.refresh_all();
+
+    thread::sleep(Duration::from_secs(5));
+    //std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
+
+    for i in 0..5 {
+        sys.refresh_processes_specifics(ProcessRefreshKind::everything().with_cpu());
+
+        // Print all proceeses and their CPU usage
+        for (pid, process) in sys.processes() {
+            if process.cpu_usage() > 0.0 {
+                println!(
+                    "Iteration: {}, name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
+                    i,
+                    process.name(),
+                    process.exe(),
+                    process.pid(),
+                    process.cpu_usage(),
+                    process.memory(),
+                    process.status(),
+                );
+            }
+        }
+
+        // Print status of the WoW Classic process
+        for process in sys.processes_by_exact_name("WowClassic.exe") {
+            println!(
+                "WoW Classic process: name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
+                process.name(),
+                process.exe(),
+                process.pid(),
+                process.cpu_usage(),
+                process.memory(),
+                process.status(),
+            );
+        }
+
+        // Sleep for the minimum CPU update interval
+        thread::sleep(Duration::from_secs(10));
+    }
+    return;
+
+    loop {
+        // TODO: Get all processes and their CPU usage using the sysinfo crate
+
+        // Loop over the remote packet queue, pop them and print them
+        while let Some((
+            rapl_measurement,
+            timestamp,
+            local_client_packet,
+            local_client_packet_operation,
+        )) = remote_packet_queue.pop()
+        {
+            // Create the remote packet using the tuple
+            let remote_packet = RemotePacket {
+                local_client_packet,
+                local_client_packet_operation,
+                rapl_measurement,
+                timestamp,
+            };
             println!("Remote packet: {:?}", remote_packet);
 
             // Lock the remote connections
@@ -217,19 +373,8 @@ fn send_packet_to_remote_clients(
         }
 
         // Sleep until the next cycle
-        std::thread::sleep(std::time::Duration::from_millis(
-            config.thor.remote_packet_queue_cycle,
-        ));
+        thread::sleep(Duration::from_millis(config.thor.remote_packet_queue_cycle));
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct RemotePacket {
-    id: String,
-    process_id: i32,
-    thread_id: usize,
-    rapl_measurement: RaplMeasurement,
-    timestamp: u128,
 }
 
 //static RAPL_LOGS_MAP: OnceCell<DashMap<String, RaplLog>> = OnceCell::new();

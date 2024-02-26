@@ -8,12 +8,17 @@ pub struct LocalClientPacket {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum LocalClientPacketEnum {
-    StartRaplPacket(LocalClientPacket),
-    StopRaplPacket(LocalClientPacket),
+pub enum LocalClientPacketOperation {
+    Start,
+    Stop,
 }
 
-pub enum AuthenticationType {
-    Process,
-    User,
+pub enum ConnectionType {
+    Local = 0,
+    Remote = 1,
+}
+
+pub enum LocalOperation {
+    Start = 0,
+    Stop = 1,
 }

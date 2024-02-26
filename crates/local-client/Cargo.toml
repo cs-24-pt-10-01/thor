@@ -7,7 +7,7 @@ edition = "2021"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
-serde = { version = "1", features = ["derive"] }
-bincode = "1"
-thread-id = "4"
+bincode = { workspace = true }
+serde = { workspace = true }
 thor-shared = { path = "../shared" }
+thread-id = { workspace = true }

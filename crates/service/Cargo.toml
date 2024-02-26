@@ -6,11 +6,13 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = { workspace = true }
+bincode = { workspace = true }
+crossbeam = { workspace = true }
+num_cpus = { workspace = true }
+serde = { workspace = true }
+sysinfo = { workspace = true }
 thor-lib = { path = "../lib" }
 thor-shared = { path = "../shared" }
-anyhow = "1"
-serde = { version = "1", features = ["derive"] }
-bincode = { version = "1" }
-tokio = { version = "1", features = ["full"] }
-crossbeam = "0.8"
-toml = "0.8"
+tokio = { workspace = true }
+toml = { workspace = true }

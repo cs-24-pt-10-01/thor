@@ -118,7 +118,7 @@ pub enum RaplMeasurement {
 
 #[bitfield(u64)]
 #[derive(PartialEq, Eq)] // <- Attributes after `bitfield` are carried over
-struct RaplPowerUnitsIntel {
+struct IntelRaplPowerUnits {
     #[bits(4)]
     power_units: usize,
 
@@ -137,7 +137,7 @@ struct RaplPowerUnitsIntel {
     #[bits(45)]
     reserved_3: u64,
 }
-
+ 
 static RAPL_INIT: Once = Once::new();
 
 // TOOD: Bitfield here, use the "bitfield-struct" crate or so. Just check it out at least. Utilize OS specific ver for it
@@ -172,7 +172,7 @@ pub fn read_rapl_msr_power_unit() -> u64 {
     use crate::intel::MSR_RAPL_POWER_UNIT;
 
     // Return the power unit
-    let power_unit = RaplPowerUnitsIntel::from_bits(
+    let power_unit = IntelRaplPowerUnits::from_bits(
         read_msr(MSR_RAPL_POWER_UNIT).expect("failed to read RAPL power unit"),
     );
 
