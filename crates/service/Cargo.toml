@@ -10,6 +10,7 @@ anyhow = { workspace = true }
 bincode = { workspace = true }
 crossbeam = { workspace = true }
 num_cpus = { workspace = true }
+rangemap = { workspace = true }
 serde = { workspace = true }
 sysinfo = { workspace = true }
 thor-lib = { path = "../lib" }

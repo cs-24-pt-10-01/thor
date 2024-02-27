@@ -1,5 +1,6 @@
 [thor]
 remote_packet_queue_cycle = 250
+sampling_interval = 50
 
 [amd]
 core = true

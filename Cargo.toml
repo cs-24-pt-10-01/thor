@@ -21,6 +21,7 @@ thiserror = "1"
 thread-id = "4"
 tokio = { version = "1", features = ["full"] }
 toml = "0.8"
+rangemap = "1"
 
 [workspace.dependencies.windows]
 version = "0.53"

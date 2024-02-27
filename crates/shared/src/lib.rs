@@ -6,6 +6,7 @@ pub struct LocalClientPacket {
     pub process_id: u32,
     pub thread_id: usize,
     pub operation: LocalClientPacketOperation,
+    pub timestamp: u128,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

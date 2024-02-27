@@ -96,7 +96,7 @@ pub enum RaplError {
     Windows(#[from] windows::core::Error),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct IntelRaplRegisters {
     pp0: u64,
     pp1: u64,
@@ -104,13 +104,13 @@ pub struct IntelRaplRegisters {
     dram: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct AmdRaplRegisters {
     core: u64,
     pkg: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum RaplMeasurement {
     Intel(IntelRaplRegisters),
     AMD(AmdRaplRegisters),
@@ -137,7 +137,7 @@ struct IntelRaplPowerUnits {
     #[bits(45)]
     reserved_3: u64,
 }
- 
+
 static RAPL_INIT: Once = Once::new();
 
 // TOOD: Bitfield here, use the "bitfield-struct" crate or so. Just check it out at least. Utilize OS specific ver for it

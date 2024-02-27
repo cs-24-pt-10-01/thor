@@ -1,7 +1,9 @@
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
+use rangemap::RangeMap;
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::VecDeque,
     fs,
     io::Write,
     sync::{Arc, Mutex},
@@ -9,12 +11,9 @@ use std::{
     time::{Duration, SystemTime},
 };
 use sysinfo::{ProcessRefreshKind, System, MINIMUM_CPU_UPDATE_INTERVAL};
-use thor_lib::{read_rapl_msr_power_unit, read_rapl_msr_registers, RaplMeasurement};
+use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
-use tokio::{
-    io::AsyncReadExt,
-    net::{TcpListener, TcpStream},
-};
+use tokio::{io::AsyncReadExt, net::TcpListener};
 
 //pub const CONFIG: bincode::config::Configuration = bincode::config::standard();
 
@@ -42,15 +41,17 @@ struct IntelConfig {
 #[derive(Debug, Deserialize)]
 struct ThorConfig {
     remote_packet_queue_cycle: u64,
+    sampling_interval: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct RemotePacket {
+struct RemoteClientPacket {
     local_client_packet: LocalClientPacket,
-    local_client_packet_operation: LocalClientPacketOperation,
     rapl_measurement: RaplMeasurement,
-    timestamp: u128,
 }
+
+static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
+static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -58,117 +59,80 @@ async fn main() -> Result<()> {
     let config_file_data = fs::read_to_string("thor-service.toml")?;
     let config: Config = toml::from_str(&config_file_data)?;
 
-    // Create a TCP listener
-    let tcp_listener = TcpListener::bind("127.0.0.1:6969").await.unwrap();
-
     // Setup the RAPL stuff queue
-    let rapl_stuff_queue = Arc::new(SegQueue::new());
     let remote_tcpstreams = Arc::new(Mutex::new(Vec::new()));
+
+    // Spawn thread for sampling
+    thread::spawn(move || rapl_sampling_thread(config.thor.sampling_interval));
 
     // Create a clone of the remote_tcpstreams and the rapl_stuff_queue to pass to the thread
     let remote_tcpstreams_clone = remote_tcpstreams.clone();
-    let rapl_stuff_queue_clone = rapl_stuff_queue.clone();
     thread::spawn(move || {
-        send_packet_to_remote_clients(rapl_stuff_queue_clone, remote_tcpstreams_clone, &config);
+        send_packet_to_remote_clients(remote_tcpstreams_clone, &config);
     });
 
+    // Create a TCP listener
+    let tcp_listener = TcpListener::bind("127.0.0.1:6969").await.unwrap();
+
+    // Enter the main loop
     loop {
         let (mut socket, _) = tcp_listener.accept().await.unwrap();
 
-        println!("Accepted connection");
-
-        // Read the connection type
+        // Read the connection type and handle it
         let connection_type = socket.read_u8().await.unwrap();
-
-        let rapl_stuff_queue_clone = rapl_stuff_queue.clone();
-
         if connection_type == ConnectionType::Local as u8 {
-            // Local connection
-
-            tokio::spawn(async move {
-                let mut client_buffer = vec![0; 100];
-
-                loop {
-                    let start_or_stop = socket.read_u8().await.unwrap();
-
-                    if start_or_stop == 123 as u8 {
-                        handle_start_rapl_packet(
-                            &mut socket,
-                            &mut client_buffer,
-                            &rapl_stuff_queue_clone,
-                            LocalClientPacketOperation::Start,
-                        )
-                        .await
-                    } else {
-                        handle_stop_rapl_packet(
-                            &mut socket,
-                            &mut client_buffer,
-                            &rapl_stuff_queue_clone,
-                            LocalClientPacketOperation::Stop,
-                        )
-                        .await
-                    }
-
-                    /*let n = match socket.read(&mut buf).await {
-                        Ok(n) if n == 0 => return,
-                        Ok(n) => n,
-                        Err(e) => {
-                            eprintln!("failed to read from socket; err = {:?}", e);
-                            return;
-                        }
-                    };
-
-                    if let Err(e) = socket.write_all(&buf[0..n]).await {
-                        eprintln!("failed to write to socket; err = {:?}", e);
-                        return;
-                    }*/
-                }
-            });
+            handle_local_connection(socket);
         } else {
-            // Remote connection
-
-            // Convert to a std::net::TcpStream and push it to the remote_tcpstreams
-            remote_tcpstreams
-                .lock()
-                .unwrap()
-                .push(socket.into_std().unwrap());
+            handle_remote_connection(remote_tcpstreams.clone(), socket);
         }
     }
+}
 
-    //unsafe { rapl_string_test(func_cstring.as_ptr()) };
+fn handle_local_connection(mut socket: tokio::net::TcpStream) {
+    tokio::spawn(async move {
+        let mut client_buffer = vec![0; 255];
 
-    //start_rapl_iter();
+        loop {
+            // Read the length of the packet
+            let local_client_packet_length = socket.read_u8().await.unwrap();
 
-    // Connect to the RAPL library
-    // Start tcp client and then connect
-    //let mut stream = TcpStream::connect("127.0.0.1:80").unwrap();
+            // Read the packet itself
+            socket
+                .read_exact(&mut client_buffer[0..local_client_packet_length as usize])
+                .await
+                .unwrap();
 
-    //stream.set_nodelay(true).unwrap();
-    //stream.set_nonblocking(true).unwrap();
+            // Deserialize the packet using the buffer
+            let local_client_packet: LocalClientPacket =
+                bincode::deserialize(&client_buffer).unwrap();
 
-    // Get the data sent from the RAPL library
+            // Push the packet to the local client packet queue
+            LOCAL_CLIENT_PACKET_QUEUE.push(local_client_packet);
+        }
+    });
+}
 
-    // Loop as designed for macrobenchmarks
-    //loop {
-    //let testy = read_rapl_msr_registers();
-    //println!("{:?}", testy);
+fn handle_remote_connection(
+    remote_tcpstreams: Arc<Mutex<Vec<std::net::TcpStream>>>,
+    socket: tokio::net::TcpStream,
+) {
+    remote_tcpstreams
+        .lock()
+        .unwrap()
+        .push(socket.into_std().unwrap());
+}
 
-    /*
-    let mut data = [0; 100];
-    println!("Reading data from RAPL library... 1");
-    stream.read_exact(&mut data).unwrap();
-    println!("Data length {}", data.len());
-    println!("Data {:?}", data);
-    println!("Finished reading data from RAPL library... 1");
-    */
+fn rapl_sampling_thread(sampling_interval: u64) {
+    // Loop and sample the RAPL data
+    loop {
+        // Grab the RAPL data and the timestamp, then push it to the queue
+        let rapl_measurement = read_rapl_msr_registers();
+        let timestamp = get_timestamp_millis();
+        SAMPLING_THREAD_DATA.push((rapl_measurement, timestamp));
 
-    //let output: OutputData = bincode::serde::decode_from_std_read(&mut stream, CONFIG).unwrap();
-    //println!("{:?}", output);
-    //println!("{:?}", output);
-
-    // Sleep for 10 milliseconds
-    //std::thread::sleep(std::time::Duration::from_millis(10));
-    //}
+        // Sleep for the sampling interval
+        thread::sleep(Duration::from_micros(sampling_interval));
+    }
 }
 
 fn get_timestamp_millis() -> u128 {
@@ -178,94 +142,7 @@ fn get_timestamp_millis() -> u128 {
         .as_millis()
 }
 
-async fn handle_start_rapl_packet(
-    socket: &mut TcpStream,
-    client_buffer: &mut Vec<u8>,
-    rapl_stuff_queue_clone: &Arc<
-        SegQueue<(
-            RaplMeasurement,
-            u128,
-            LocalClientPacket,
-            LocalClientPacketOperation,
-        )>,
-    >,
-    local_client_packet_operation: LocalClientPacketOperation,
-) {
-    // Get the local client packet
-    let local_client_packet = get_dat_local_client_packet_yo(socket, client_buffer).await;
-
-    // Get the timestamp as milliseconds
-    let timestamp = get_timestamp_millis();
-
-    // Read the RAPL registers at the end to prioritize energy measurements
-    let rapl_measurement = read_rapl_msr_registers();
-
-    // Push the data to the rapl_stuff_queue
-    rapl_stuff_queue_clone.push((
-        rapl_measurement,
-        timestamp,
-        local_client_packet,
-        local_client_packet_operation,
-    ));
-}
-
-async fn handle_stop_rapl_packet(
-    socket: &mut TcpStream,
-    client_buffer: &mut Vec<u8>,
-    rapl_stuff_queue_clone: &Arc<
-        SegQueue<(
-            RaplMeasurement,
-            u128,
-            LocalClientPacket,
-            LocalClientPacketOperation,
-        )>,
-    >,
-    local_client_packet_operation: LocalClientPacketOperation,
-) {
-    // Read the RAPL registers at the start to prioritize energy measurements
-    let rapl_measurement = read_rapl_msr_registers();
-
-    // Get the timestamp as milliseconds
-    let timestamp = get_timestamp_millis();
-
-    // Get the local client packet
-    let local_client_packet = get_dat_local_client_packet_yo(socket, client_buffer).await;
-
-    // Push the data to the rapl_stuff_queue
-    rapl_stuff_queue_clone.push((
-        rapl_measurement,
-        timestamp,
-        local_client_packet,
-        local_client_packet_operation,
-    ));
-}
-
-async fn get_dat_local_client_packet_yo(
-    socket: &mut TcpStream,
-    client_buffer: &mut Vec<u8>,
-) -> LocalClientPacket {
-    let packet_length = socket.read_u8().await.unwrap();
-
-    println!("Got packet with len: {}", packet_length);
-
-    // Read packet_length bytes from the socket
-    socket
-        .read_exact(&mut client_buffer[0..packet_length as usize])
-        .await
-        .unwrap();
-
-    bincode::deserialize(&client_buffer).unwrap()
-}
-
 fn send_packet_to_remote_clients(
-    remote_packet_queue: Arc<
-        SegQueue<(
-            RaplMeasurement,
-            u128,
-            LocalClientPacket,
-            LocalClientPacketOperation,
-        )>,
-    >,
     remote_connections: Arc<Mutex<Vec<std::net::TcpStream>>>,
     config: &Config,
 ) {
@@ -276,14 +153,88 @@ fn send_packet_to_remote_clients(
     if duration < MINIMUM_CPU_UPDATE_INTERVAL {
         panic!(
             "Remote packet queue cycle must be greater than the minimum update interval of {:?}",
-            sysinfo::MINIMUM_CPU_UPDATE_INTERVAL
+            MINIMUM_CPU_UPDATE_INTERVAL
         );
     }
+
+    let mut remote_client_packets = Vec::new();
+    let mut rangemap = RangeMap::new();
+
+    loop {
+        let mut local_client_packets = VecDeque::new();
+
+        // Extract local clients initially to allow the sampler getting ahead
+        while let Some(local_client_packet) = LOCAL_CLIENT_PACKET_QUEUE.pop() {
+            local_client_packets.push_back(local_client_packet);
+        }
+
+        // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
+
+        // Populate the rangemap with sampling data
+        // Get the initial RAPL measurement and timestamp
+        if let Some((mut initial_rapl_measurement, mut initial_timestamp)) =
+            SAMPLING_THREAD_DATA.pop()
+        {
+            // Iterate over the RAPL measurements and timestamps
+            while let Some((rapl_measurement, timestamp)) = SAMPLING_THREAD_DATA.pop() {
+                // Check if the initial RAPL measurement is different from the current one,
+                // and the initial timestamp is different from the current one (required for the rangemap to work properly)
+                if initial_rapl_measurement != rapl_measurement && initial_timestamp != timestamp {
+                    // Insert the range into the rangemap
+                    rangemap.insert(initial_timestamp..timestamp, initial_rapl_measurement);
+
+                    // Update the initial RAPL measurement and timestamp
+                    initial_rapl_measurement = rapl_measurement;
+                    initial_timestamp = timestamp;
+                }
+            }
+        }
+
+        while let Some(local_client_packet) = local_client_packets.pop_front() {
+            // Get the RAPL measurement and timestamp from the rangemap
+            let rapl_measurement = rangemap
+                .get(&local_client_packet.timestamp)
+                .expect("No RAPL measurement found for timestamp");
+
+            // Construct the remote client packet
+            let remote_client_packet = RemoteClientPacket {
+                local_client_packet,
+                rapl_measurement: rapl_measurement.clone(),
+            };
+
+            println!(
+                "Constructed remote client packet: {:?}",
+                remote_client_packet
+            );
+
+            // Push the remote client packet to the remote client packets vector
+            remote_client_packets.push(remote_client_packet);
+        }
+
+        let mut remote_connections_lock = remote_connections.lock().unwrap();
+
+        // Send the remote client packets to the remote clients if there is any connections available
+        if !remote_connections_lock.is_empty() {
+            for conn in remote_connections_lock.iter_mut() {
+                let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
+                conn.write_all(&serialized_packet).unwrap();
+            }
+            remote_client_packets.clear();
+        }
+
+        // Remove rangemap measurements from 5 to 10 seconds ago
+        rangemap.remove((get_timestamp_millis() - 10000)..get_timestamp_millis() - 5000);
+
+        // Sleep for the duration
+        thread::sleep(duration);
+    }
+
+    // TODO: Consider handling for process usage
 
     // Create a system and refresh it
     // TODO: Maybe move this into the main function initially,
     // and then pass it to this function, to prevent receiving packets before it is ready
-    let mut sys = System::new_all();
+    /*let mut sys = System::new_all();
     sys.refresh_all();
 
     thread::sleep(Duration::from_secs(5));
@@ -323,59 +274,5 @@ fn send_packet_to_remote_clients(
 
         // Sleep for the minimum CPU update interval
         thread::sleep(Duration::from_secs(10));
-    }
-    return;
-
-    loop {
-        // TODO: Get all processes and their CPU usage using the sysinfo crate
-
-        // Loop over the remote packet queue, pop them and print them
-        while let Some((
-            rapl_measurement,
-            timestamp,
-            local_client_packet,
-            local_client_packet_operation,
-        )) = remote_packet_queue.pop()
-        {
-            // Create the remote packet using the tuple
-            let remote_packet = RemotePacket {
-                local_client_packet,
-                local_client_packet_operation,
-                rapl_measurement,
-                timestamp,
-            };
-            println!("Remote packet: {:?}", remote_packet);
-
-            // Lock the remote connections
-            let mut remote_connections = remote_connections.lock().unwrap();
-
-            // Loop over all the remote connections and send the remote packet
-            for remote_connection in remote_connections.iter_mut() {
-                let remote_packet_serialized = bincode::serialize(&remote_packet).unwrap();
-
-                // Send the remote packet
-                remote_connection
-                    .write_all(&remote_packet_serialized)
-                    .unwrap();
-
-                // TODO: Handle the case where the remote connection is dead
-                /*remote_connections.retain(|mut remote_connection| {
-                    match remote_connection.write_all(&remote_packet_serialized) {
-                        Ok(_) => true,
-                        Err(e) if e.kind() == std::io::ErrorKind::BrokenPipe => {
-                            println!("Connection closed");
-                            false
-                        }
-                        Err(_) => true,
-                    }
-                });*/
-            }
-        }
-
-        // Sleep until the next cycle
-        thread::sleep(Duration::from_millis(config.thor.remote_packet_queue_cycle));
-    }
+    }*/
 }
-
-//static RAPL_LOGS_MAP: OnceCell<DashMap<String, RaplLog>> = OnceCell::new();
-//static RAPL_LOGS_QUEUE: OnceCell<SegQueue<RaplLog>> = OnceCell::new();

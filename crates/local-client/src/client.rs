@@ -1,5 +1,11 @@
 use crossbeam::queue::SegQueue;
-use std::{io::Write, net::TcpStream, sync::Once, thread, time::Duration};
+use std::{
+    io::Write,
+    net::TcpStream,
+    sync::Once,
+    thread,
+    time::{Duration, SystemTime},
+};
 use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
 
 static RAPL_INIT: Once = Once::new();
@@ -17,9 +23,6 @@ fn send_packet_queue() {
         while let Some(packet) = LOCAL_CLIENT_PACKET_QUEUE.pop() {
             // Serialize the packet using bincode
             let serialized = bincode::serialize(&packet).unwrap();
-
-            // Print len for debugging
-            println!("Sending packet of length: {}", serialized.len());
 
             // Write length and then the serialized packet
             stream.write_all(&[(serialized.len() as u8)]).unwrap();
@@ -42,6 +45,10 @@ pub fn start_rapl(id: impl AsRef<str>) {
         process_id: 12345,
         thread_id: thread_id::get(),
         operation: LocalClientPacketOperation::Start,
+        timestamp: SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis(),
     };
     LOCAL_CLIENT_PACKET_QUEUE.push(packet);
 }
@@ -52,6 +59,10 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         process_id: 12345,
         thread_id: thread_id::get(),
         operation: LocalClientPacketOperation::Stop,
+        timestamp: SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis(),
     };
     LOCAL_CLIENT_PACKET_QUEUE.push(packet);
 }
