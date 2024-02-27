@@ -5,6 +5,7 @@ pub struct LocalClientPacket {
     pub id: String,
     pub process_id: u32,
     pub thread_id: usize,
+    pub operation: LocalClientPacketOperation,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -16,9 +17,4 @@ pub enum LocalClientPacketOperation {
 pub enum ConnectionType {
     Local = 0,
     Remote = 1,
-}
-
-pub enum LocalOperation {
-    Start = 0,
-    Stop = 1,
 }

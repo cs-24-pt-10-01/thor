@@ -479,6 +479,7 @@ name = "thor-local-client"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "crossbeam",
  "serde",
  "thor-shared",
  "thread-id",

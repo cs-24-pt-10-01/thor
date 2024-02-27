@@ -10,7 +10,7 @@ use std::{
 };
 use sysinfo::{ProcessRefreshKind, System, MINIMUM_CPU_UPDATE_INTERVAL};
 use thor_lib::{read_rapl_msr_power_unit, read_rapl_msr_registers, RaplMeasurement};
-use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation, LocalOperation};
+use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
 use tokio::{
     io::AsyncReadExt,
     net::{TcpListener, TcpStream},
@@ -91,7 +91,7 @@ async fn main() -> Result<()> {
                 loop {
                     let start_or_stop = socket.read_u8().await.unwrap();
 
-                    if start_or_stop == LocalOperation::Start as u8 {
+                    if start_or_stop == 123 as u8 {
                         handle_start_rapl_packet(
                             &mut socket,
                             &mut client_buffer,
