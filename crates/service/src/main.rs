@@ -174,46 +174,12 @@ fn send_packet_to_remote_clients(
         // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
 
         // Populate the rangemap with sampling data
-        // Get the initial RAPL measurement and timestamp
-        if let Some((mut initial_rapl_measurement, mut initial_timestamp)) =
-            SAMPLING_THREAD_DATA.pop()
-        {
-            // Iterate over the RAPL measurements and timestamps
-            while let Some((rapl_measurement, timestamp)) = SAMPLING_THREAD_DATA.pop() {
-                // Check if the initial RAPL measurement is different from the current one,
-                // and the initial timestamp is different from the current one (required for the rangemap to work properly)
-                if initial_rapl_measurement != rapl_measurement && initial_timestamp != timestamp {
-                    // Insert the range into the rangemap
-                    rangemap.insert(initial_timestamp..timestamp, initial_rapl_measurement);
+        populate_rangemap(&mut rangemap);
 
-                    // Update the initial RAPL measurement and timestamp
-                    initial_rapl_measurement = rapl_measurement;
-                    initial_timestamp = timestamp;
-                }
-            }
-        }
+        // Create remote client packets
+        create_remote_client_packets(local_client_packets, &rangemap, &mut remote_client_packets);
 
-        while let Some(local_client_packet) = local_client_packets.pop_front() {
-            // Get the RAPL measurement and timestamp from the rangemap
-            let rapl_measurement = rangemap
-                .get(&local_client_packet.timestamp)
-                .expect("No RAPL measurement found for timestamp");
-
-            // Construct the remote client packet
-            let remote_client_packet = RemoteClientPacket {
-                local_client_packet,
-                rapl_measurement: rapl_measurement.clone(),
-            };
-
-            println!(
-                "Constructed remote client packet: {:?}",
-                remote_client_packet
-            );
-
-            // Push the remote client packet to the remote client packets vector
-            remote_client_packets.push(remote_client_packet);
-        }
-
+        // Get a lock on the remote connections
         let mut remote_connections_lock = remote_connections.lock().unwrap();
 
         // Send the remote client packets to the remote clients if there is any connections available
@@ -227,7 +193,7 @@ fn send_packet_to_remote_clients(
             remote_client_packets.clear();
         }
 
-        // Remove rangemap measurements from 5 to 10 seconds ago
+        // Remove rangemap measurements from 5 to 10 seconds ago for memory management
         rangemap.remove((get_timestamp_millis() - 10000)..get_timestamp_millis() - 5000);
 
         // Sleep for the duration
@@ -280,4 +246,51 @@ fn send_packet_to_remote_clients(
         // Sleep for the minimum CPU update interval
         thread::sleep(Duration::from_secs(10));
     }*/
+}
+
+fn create_remote_client_packets(
+    mut local_client_packets: VecDeque<LocalClientPacket>,
+    rangemap: &RangeMap<u128, RaplMeasurement>,
+    remote_client_packets: &mut Vec<RemoteClientPacket>,
+) {
+    while let Some(local_client_packet) = local_client_packets.pop_front() {
+        // Get the RAPL measurement and timestamp from the rangemap
+        let rapl_measurement = rangemap
+            .get(&local_client_packet.timestamp)
+            .expect("No RAPL measurement found for timestamp");
+
+        // Construct the remote client packet
+        let remote_client_packet = RemoteClientPacket {
+            local_client_packet,
+            rapl_measurement: rapl_measurement.clone(),
+        };
+
+        println!(
+            "Constructed remote client packet: {:?}",
+            remote_client_packet
+        );
+
+        // Push the remote client packet to the remote client packets vector
+        remote_client_packets.push(remote_client_packet);
+    }
+}
+
+fn populate_rangemap(rangemap: &mut RangeMap<u128, RaplMeasurement>) {
+    // Get the initial RAPL measurement and timestamp
+    if let Some((mut initial_rapl_measurement, mut initial_timestamp)) = SAMPLING_THREAD_DATA.pop()
+    {
+        // Iterate over the RAPL measurements and timestamps
+        while let Some((rapl_measurement, timestamp)) = SAMPLING_THREAD_DATA.pop() {
+            // Check if the initial RAPL measurement is different from the current one,
+            // and the initial timestamp is different from the current one (required for the rangemap to work properly)
+            if initial_rapl_measurement != rapl_measurement && initial_timestamp != timestamp {
+                // Insert the range into the rangemap
+                rangemap.insert(initial_timestamp..timestamp, initial_rapl_measurement);
+
+                // Update the initial RAPL measurement and timestamp
+                initial_rapl_measurement = rapl_measurement;
+                initial_timestamp = timestamp;
+            }
+        }
+    }
 }
