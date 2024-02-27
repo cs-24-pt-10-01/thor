@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use thor_lib::RaplMeasurement;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LocalClientPacket {
@@ -18,4 +19,10 @@ pub enum LocalClientPacketOperation {
 pub enum ConnectionType {
     Local = 0,
     Remote = 1,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RemoteClientPacket {
+    pub local_client_packet: LocalClientPacket,
+    pub rapl_measurement: RaplMeasurement,
 }

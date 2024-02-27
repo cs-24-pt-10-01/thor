@@ -1,7 +1,7 @@
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
 use rangemap::RangeMap;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::{
     collections::VecDeque,
     fs,
@@ -10,9 +10,9 @@ use std::{
     thread,
     time::{Duration, SystemTime},
 };
-use sysinfo::{ProcessRefreshKind, System, MINIMUM_CPU_UPDATE_INTERVAL};
+use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
-use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
+use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
 //pub const CONFIG: bincode::config::Configuration = bincode::config::standard();
@@ -42,12 +42,6 @@ struct IntelConfig {
 struct ThorConfig {
     remote_packet_queue_cycle: u64,
     sampling_interval: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct RemoteClientPacket {
-    local_client_packet: LocalClientPacket,
-    rapl_measurement: RaplMeasurement,
 }
 
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
@@ -90,17 +84,26 @@ async fn main() -> Result<()> {
 
 fn handle_local_connection(mut socket: tokio::net::TcpStream) {
     tokio::spawn(async move {
-        let mut client_buffer = vec![0; 255];
+        let mut client_buffer = vec![0; u8::MAX as usize];
 
         loop {
             // Read the length of the packet
-            let local_client_packet_length = socket.read_u8().await.unwrap();
+            let local_client_packet_length = match socket.read_u8().await {
+                Ok(length) => length,
+                Err(_) => {
+                    // If the client has disconnected, break the loop
+                    break;
+                }
+            };
 
             // Read the packet itself
-            socket
+            if let Err(_) = socket
                 .read_exact(&mut client_buffer[0..local_client_packet_length as usize])
                 .await
-                .unwrap();
+            {
+                // If the client has disconnected, break the loop
+                break;
+            }
 
             // Deserialize the packet using the buffer
             let local_client_packet: LocalClientPacket =
@@ -214,9 +217,11 @@ fn send_packet_to_remote_clients(
         let mut remote_connections_lock = remote_connections.lock().unwrap();
 
         // Send the remote client packets to the remote clients if there is any connections available
-        if !remote_connections_lock.is_empty() {
+        if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
             for conn in remote_connections_lock.iter_mut() {
                 let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
+                conn.write_all(&(serialized_packet.len() as u16).to_be_bytes())
+                    .unwrap();
                 conn.write_all(&serialized_packet).unwrap();
             }
             remote_client_packets.clear();
