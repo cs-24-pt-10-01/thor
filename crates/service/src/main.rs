@@ -268,11 +268,6 @@ fn create_remote_client_packets(
             rapl_measurement: rapl_measurement.clone(),
         };
 
-        println!(
-            "Constructed remote client packet: {:?}",
-            remote_client_packet
-        );
-
         // Push the remote client packet to the remote client packets vector
         remote_client_packets.push(remote_client_packet);
     }
