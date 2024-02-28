@@ -274,6 +274,11 @@ fn create_remote_client_packets(
 }
 
 fn populate_rangemap(rangemap: &mut RangeMap<u128, RaplMeasurement>) {
+    // If there are less than 2 RAPL measurements, return
+    if SAMPLING_THREAD_DATA.len() < 2 {
+        return;
+    }
+
     // Get the initial RAPL measurement and timestamp
     if let Some((mut initial_rapl_measurement, mut initial_timestamp)) = SAMPLING_THREAD_DATA.pop()
     {
