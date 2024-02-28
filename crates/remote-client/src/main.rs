@@ -23,7 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config: Config = toml::from_str(&config_file_data)?;
 
     // Connect to the server
-    let mut stream = TcpStream::connect("127.0.0.1:6969").await.unwrap();
+    let mut stream = TcpStream::connect(config.server_ip).await.unwrap();
 
     // Signify which type of client this is (it is a local client)
     stream
