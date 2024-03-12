@@ -1,5 +1,9 @@
 use csv::WriterBuilder;
-use std::{error::Error, fs::OpenOptions};
+use serde::Deserialize;
+use std::{
+    error::Error,
+    fs::{self, OpenOptions},
+};
 use thor_lib::RaplMeasurement::{Intel, AMD};
 use thor_shared::{ConnectionType, RemoteClientPacket};
 use tokio::{
@@ -7,10 +11,19 @@ use tokio::{
     net::TcpStream,
 };
 
+#[derive(Debug, Deserialize)]
+struct Config {
+    server_ip: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // Load the config file
+    let config_file_data = fs::read_to_string("remote-client.toml")?;
+    let config: Config = toml::from_str(&config_file_data)?;
+
     // Connect to the server
-    let mut stream = TcpStream::connect("127.0.0.1:6969").await.unwrap();
+    let mut stream = TcpStream::connect(config.server_ip).await.unwrap();
 
     // Signify which type of client this is (it is a local client)
     stream

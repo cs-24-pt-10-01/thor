@@ -42,6 +42,7 @@ struct IntelConfig {
 struct ThorConfig {
     remote_packet_queue_cycle: u64,
     sampling_interval: u64,
+    server_ip: String,
 }
 
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
@@ -51,22 +52,24 @@ static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new()
 async fn main() -> Result<()> {
     // Load the config file
     let config_file_data = fs::read_to_string("thor-service.toml")?;
-    let config: Config = toml::from_str(&config_file_data)?;
+    let config: Arc<Config> = Arc::new(toml::from_str(&config_file_data)?);
 
     // Setup the RAPL stuff queue
     let remote_tcpstreams = Arc::new(Mutex::new(Vec::new()));
 
     // Spawn thread for sampling
-    thread::spawn(move || rapl_sampling_thread(config.thor.sampling_interval));
+    let config_sampling = config.clone();
+    thread::spawn(move || rapl_sampling_thread(config_sampling.thor.sampling_interval));
 
     // Create a clone of the remote_tcpstreams and the rapl_stuff_queue to pass to the thread
     let remote_tcpstreams_clone = remote_tcpstreams.clone();
+    let config_send_packet_queue = config.clone();
     thread::spawn(move || {
-        send_packet_to_remote_clients(remote_tcpstreams_clone, &config);
+        send_packet_to_remote_clients(remote_tcpstreams_clone, config_send_packet_queue);
     });
 
     // Create a TCP listener
-    let tcp_listener = TcpListener::bind("127.0.0.1:6969").await.unwrap();
+    let tcp_listener = TcpListener::bind(&config.thor.server_ip).await.unwrap();
 
     // Enter the main loop
     loop {
@@ -147,7 +150,7 @@ fn get_timestamp_millis() -> u128 {
 
 fn send_packet_to_remote_clients(
     remote_connections: Arc<Mutex<Vec<std::net::TcpStream>>>,
-    config: &Config,
+    config: Arc<Config>,
 ) {
     // Create duration from the config
     let duration = Duration::from_millis(config.thor.remote_packet_queue_cycle);
@@ -265,17 +268,17 @@ fn create_remote_client_packets(
             rapl_measurement: rapl_measurement.clone(),
         };
 
-        println!(
-            "Constructed remote client packet: {:?}",
-            remote_client_packet
-        );
-
         // Push the remote client packet to the remote client packets vector
         remote_client_packets.push(remote_client_packet);
     }
 }
 
 fn populate_rangemap(rangemap: &mut RangeMap<u128, RaplMeasurement>) {
+    // If there are less than 2 RAPL measurements, return
+    if SAMPLING_THREAD_DATA.len() < 2 {
+        return;
+    }
+
     // Get the initial RAPL measurement and timestamp
     if let Some((mut initial_rapl_measurement, mut initial_timestamp)) = SAMPLING_THREAD_DATA.pop()
     {
