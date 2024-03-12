@@ -1,5 +1,5 @@
 [thor]
-remote_packet_queue_cycle = 250
+remote_packet_queue_cycle_millis = 250
 sampling_interval = 50
 
 [amd]

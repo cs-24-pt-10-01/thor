@@ -40,7 +40,7 @@ struct IntelConfig {
 
 #[derive(Debug, Deserialize)]
 struct ThorConfig {
-    remote_packet_queue_cycle: u64,
+    remote_packet_queue_cycle_millis: u64,
     sampling_interval: u64,
 }
 
@@ -150,7 +150,7 @@ fn send_packet_to_remote_clients(
     config: &Config,
 ) {
     // Create duration from the config
-    let duration = Duration::from_millis(config.thor.remote_packet_queue_cycle);
+    let duration = Duration::from_millis(config.thor.remote_packet_queue_cycle_millis);
 
     // Check if the duration is less than the minimum update interval
     if duration < MINIMUM_CPU_UPDATE_INTERVAL {
