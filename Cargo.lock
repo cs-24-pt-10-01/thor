@@ -384,9 +384,11 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "csv",
+ "serde",
  "thor-lib",
  "thor-shared",
  "tokio",
+ "toml",
 ]
 
 [[package]]
