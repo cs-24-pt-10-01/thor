@@ -97,7 +97,6 @@ impl Listener for DefList {
     }
 }
 
-
 fn handle_local_connection(mut socket: tokio::net::TcpStream) {
     tokio::spawn(async move {
         let mut client_buffer = vec![0; u8::MAX as usize];
