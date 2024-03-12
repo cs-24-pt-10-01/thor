@@ -1,14 +1,14 @@
+use anyhow::Result;
+
 pub struct Measure {
     pub timestamp_start: u128,
     pub timestamp_end: u128,
     pub pkg: f64,
-    pub pp0: f64 // core
+    pub pp0: f64, // core
 }
 
-
-
 pub trait Measurement {
-    fn get_measurement(&self, timestamp: u128 ) -> Measure; // hmm how this?
+    fn get_measurement(&self, timestamp: u128) -> Measure; // hmm how this?
 }
 
 pub trait Build {
@@ -20,5 +20,11 @@ pub trait StartProcess {
 }
 
 pub trait Listener {
-    fn start_listening<S:StartProcess,B:Build,M:Measurement>(&self, start_process:S, builder:B, measurement:M, port: u16) -> bool; // returns whether it succeded
+    fn start_listening<S: StartProcess, B: Build, M: Measurement>(
+        &self,
+        start_process: S,
+        builder: B,
+        measurement: M,
+        port: u16,
+    ) -> Result<()>;
 }
