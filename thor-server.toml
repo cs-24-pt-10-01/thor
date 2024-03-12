@@ -1,6 +1,7 @@
 [thor]
 remote_packet_queue_cycle_millis = 250
 sampling_interval = 50
+server_ip = "127.0.0.1:6969"
 
 [amd]
 core = true
