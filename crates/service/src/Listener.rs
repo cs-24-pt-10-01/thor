@@ -1,9 +1,9 @@
 use anyhow::Result;
 use crate::component_def::{StartProcess, Build, Measurement, Listener};
 
-pub struct defList{}
+pub struct DefList{}
 
-impl Listener for defList{
+impl Listener for DefList{
     fn start_listening<S: StartProcess, B: Build, M: Measurement>(
         &self,
         start_process: S,
@@ -17,7 +17,7 @@ impl Listener for defList{
         if !start_process.start_process("".to_string()){
             print!("start process failed");
         }
-        
+
         println!("listener not implemented");
         Ok(())
     }
