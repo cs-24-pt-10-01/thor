@@ -50,7 +50,7 @@ static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new()
 #[tokio::main]
 async fn main() -> Result<()> {
     // Load the config file
-    let config_file_data = fs::read_to_string("thor-service.toml")?;
+    let config_file_data = fs::read_to_string("thor-server.toml")?;
     let config: Config = toml::from_str(&config_file_data)?;
 
     // Setup the RAPL stuff queue
