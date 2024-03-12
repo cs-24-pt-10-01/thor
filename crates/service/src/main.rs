@@ -41,7 +41,7 @@ struct IntelConfig {
 #[derive(Debug, Deserialize)]
 struct ThorConfig {
     remote_packet_queue_cycle_millis: u64,
-    sampling_interval: u64,
+    sampling_interval_micros: u64,
     server_ip: String,
 }
 
@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
 
     // Spawn thread for sampling
     let config_sampling = config.clone();
-    thread::spawn(move || rapl_sampling_thread(config_sampling.thor.sampling_interval));
+    thread::spawn(move || rapl_sampling_thread(config_sampling.thor.sampling_interval_micros));
 
     // Create a clone of the remote_tcpstreams and the rapl_stuff_queue to pass to the thread
     let remote_tcpstreams_clone = remote_tcpstreams.clone();
