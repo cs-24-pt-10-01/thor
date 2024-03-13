@@ -4,6 +4,8 @@ mod listener;
 mod measurement;
 mod start_process;
 
+use rangemap::RangeMap;
+
 // definitions of components
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
@@ -15,8 +17,12 @@ use crate::start_process::defStart;
 
 fn main() {
     let start = defStart {};
+
     let build = defBuild {};
-    let measure = defMeasure {};
+
+    let mut measure = defMeasure;
+    measure.start_measureing(1000);
+
     let listen = DefList {};
     listen.start_listening(start, build, measure, 8080);
 }

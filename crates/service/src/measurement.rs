@@ -1,15 +1,118 @@
+use anyhow::Result;
+use crossbeam::queue::SegQueue;
+use rangemap::RangeMap;
+use serde::Deserialize;
+use std::{
+    collections::VecDeque,
+    fs,
+    io::Write,
+    ptr::NonNull,
+    sync::{Arc, Mutex},
+    thread,
+    time::{Duration, SystemTime},
+};
+use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
+use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
+use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
+use tokio::{io::AsyncReadExt, net::TcpListener};
+
 use crate::component_def::{Build, Listener, Measure, Measurement, StartProcess};
 
-pub struct defMeasure {}
+//static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
+//static mut RANGE_MAP: RangeMap<u128, RaplMeasurement> = RangeMap::new();
 
-impl Measurement for defMeasure {
-    fn get_measurement(&self, timestamp: u128) -> Measure {
-        println!("measurement not implemented returning 0.0");
-        Measure {
-            timestamp_start: 0,
-            timestamp_end: 0,
-            pkg: 0.0,
-            pp0: 0.0,
+static mut SAMPLING_THREAD_DATA: Vec<(RaplMeasurement, u128)> = Vec::new();
+pub struct defMeasure;
+impl Measurement<RaplMeasurement> for defMeasure {
+    fn get_measurement(&self, timestamp: u128) -> RaplMeasurement {
+        // find measurement for timestamp (linear implem)
+        unsafe {
+            let mut last: &RaplMeasurement = &SAMPLING_THREAD_DATA.last().unwrap().0;
+            for (rapl_measurement, time) in SAMPLING_THREAD_DATA.iter().rev() {
+                if *time <= timestamp {
+                    return last.clone();
+                }
+                last = rapl_measurement;
+            }
+            panic!("No measurement found for timestamp {}", timestamp);
         }
     }
 }
+
+impl defMeasure {
+    pub fn start_measureing(&self, sampling_interval: u64) -> Result<()> {
+        thread::spawn(move || {
+            rapl_sampling_thread(sampling_interval);
+        });
+        Ok(())
+    }
+}
+
+fn rapl_sampling_thread(sampling_interval: u64) {
+    // Loop and sample the RAPL data
+    loop {
+        // Grab the RAPL data and the timestamp, then push it to the queue
+        let rapl_measurement = read_rapl_msr_registers();
+        let timestamp = get_timestamp_millis();
+        unsafe {
+            SAMPLING_THREAD_DATA.push((rapl_measurement, timestamp));
+        }
+
+        // Sleep for the sampling interval
+        thread::sleep(Duration::from_micros(sampling_interval));
+    }
+}
+
+fn get_timestamp_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+}
+
+// TODO: Consider handling for process usage
+
+// Create a system and refresh it
+// TODO: Maybe move this into the main function initially,
+// and then pass it to this function, to prevent receiving packets before it is ready
+/*let mut sys = System::new_all();
+sys.refresh_all();
+
+thread::sleep(Duration::from_secs(5));
+//std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
+
+for i in 0..5 {
+    sys.refresh_processes_specifics(ProcessRefreshKind::everything().with_cpu());
+
+    // Print all proceeses and their CPU usage
+    for (pid, process) in sys.processes() {
+        if process.cpu_usage() > 0.0 {
+            println!(
+                "Iteration: {}, name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
+                i,
+                process.name(),
+                process.exe(),
+                process.pid(),
+                process.cpu_usage(),
+                process.memory(),
+                process.status(),
+            );
+        }
+    }
+
+    // Print status of the WoW Classic process
+    for process in sys.processes_by_exact_name("WowClassic.exe") {
+        println!(
+            "WoW Classic process: name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
+            process.name(),
+            process.exe(),
+            process.pid(),
+            process.cpu_usage(),
+            process.memory(),
+            process.status(),
+        );
+    }
+
+    // Sleep for the minimum CPU update interval
+    thread::sleep(Duration::from_secs(10));
+}*/
