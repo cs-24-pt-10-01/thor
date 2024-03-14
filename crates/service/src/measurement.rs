@@ -21,21 +21,24 @@ use crate::component_def::{Build, Listener, Measure, Measurement, StartProcess};
 //static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
 //static mut RANGE_MAP: RangeMap<u128, RaplMeasurement> = RangeMap::new();
 
-static mut SAMPLING_THREAD_DATA: Vec<(RaplMeasurement, u128)> = Vec::new();
+static mut SAMPLING_THREAD_DATA: VecDeque<(RaplMeasurement, u128)> = VecDeque::new();
 pub struct defMeasure;
 impl Measurement<RaplMeasurement> for defMeasure {
     fn get_measurement(&self, timestamp: u128) -> RaplMeasurement {
-        // find measurement for timestamp (linear implem)
+        let result = find_measurement(timestamp);
+
+        //deleting old measurements
         unsafe {
-            let mut last: &RaplMeasurement = &SAMPLING_THREAD_DATA.last().unwrap().0;
-            for (rapl_measurement, time) in SAMPLING_THREAD_DATA.iter().rev() {
-                if *time <= timestamp {
-                    return last.clone();
+            while let Some((_, time)) = SAMPLING_THREAD_DATA.front() {
+                if *time < timestamp - 5000 {
+                    SAMPLING_THREAD_DATA.pop_front();
+                } else {
+                    break;
                 }
-                last = rapl_measurement;
             }
-            panic!("No measurement found for timestamp {}", timestamp);
         }
+
+        result
     }
 }
 
@@ -48,6 +51,19 @@ impl defMeasure {
     }
 }
 
+fn find_measurement(timestamp: u128) -> RaplMeasurement {
+    unsafe {
+        let mut last: &RaplMeasurement = &SAMPLING_THREAD_DATA.back().unwrap().0;
+        for (rapl_measurement, time) in SAMPLING_THREAD_DATA.iter().rev() {
+            if *time <= timestamp {
+                return last.clone();
+            }
+            last = rapl_measurement;
+        }
+        panic!("No measurement found for timestamp {}", timestamp);
+    }
+}
+
 fn rapl_sampling_thread(sampling_interval: u64) {
     // Loop and sample the RAPL data
     loop {
@@ -55,7 +71,7 @@ fn rapl_sampling_thread(sampling_interval: u64) {
         let rapl_measurement = read_rapl_msr_registers();
         let timestamp = get_timestamp_millis();
         unsafe {
-            SAMPLING_THREAD_DATA.push((rapl_measurement, timestamp));
+            SAMPLING_THREAD_DATA.push_back((rapl_measurement, timestamp));
         }
 
         // Sleep for the sampling interval
