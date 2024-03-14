@@ -76,8 +76,9 @@ impl Listener<RaplMeasurement> for DefList {
         let remote_tcpstreams_clone = remote_tcpstreams.clone();
         let config_send_packet_queue = config.clone();
 
-        thread::spawn(|| async {
-            listen(config_send_packet_queue, remote_tcpstreams_clone).await;
+        thread::spawn(move || {
+            let fut = listen(config_send_packet_queue, remote_tcpstreams_clone);
+            tokio::runtime::Runtime::new().unwrap().block_on(fut);
         });
 
         send_packet_to_remote_clients(remote_tcpstreams, config, &measurement);
@@ -88,6 +89,7 @@ impl Listener<RaplMeasurement> for DefList {
 
 async fn listen(config: Arc<Config>, remote_tcpstreams: Arc<Mutex<Vec<std::net::TcpStream>>>) {
     // Create a TCP listener
+    println!("Listening on: {}", config.thor.server_ip);
     let tcp_listener = TcpListener::bind(&config.thor.server_ip).await.unwrap();
 
     // Enter the main loop
@@ -175,27 +177,38 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 
         // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
 
-        // Create remote client packets
-        create_remote_client_packets(
-            local_client_packets,
-            measurement,
-            &mut remote_client_packets,
-        );
+        // TODO handle disconnected clients
 
-        // Get a lock on the remote connections
-        let mut remote_connections_lock = remote_connections.lock().unwrap();
+        if local_client_packets.is_empty() {
+            //keeping the sampler alive
+            let _ = measurement.get_measurement(
+                SystemTime::now()
+                    .duration_since(SystemTime::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis(),
+            );
+        } else {
+            // Create remote client packets
+            create_remote_client_packets(
+                local_client_packets,
+                measurement,
+                &mut remote_client_packets,
+            );
 
-        // Send the remote client packets to the remote clients if there is any connections available
-        if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
-            for conn in remote_connections_lock.iter_mut() {
-                let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
-                conn.write_all(&(serialized_packet.len() as u16).to_be_bytes())
-                    .unwrap();
-                conn.write_all(&serialized_packet).unwrap();
+            // Get a lock on the remote connections
+            let mut remote_connections_lock = remote_connections.lock().unwrap();
+
+            // Send the remote client packets to the remote clients if there is any connections available
+            if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
+                for conn in remote_connections_lock.iter_mut() {
+                    let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
+                    conn.write_all(&(serialized_packet.len() as u16).to_be_bytes())
+                        .unwrap();
+                    conn.write_all(&serialized_packet).unwrap();
+                }
+                remote_client_packets.clear();
             }
-            remote_client_packets.clear();
         }
-
         // Sleep for the duration
         thread::sleep(duration);
     }
