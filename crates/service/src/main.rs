@@ -30,9 +30,11 @@ fn main() {
 
     let build = BuilderImplem {};
 
-    let measure = RaplSampler;
+    let measure = RaplSampler {
+        max_sample_age: config.thor.max_sample_age as u128,
+    };
     measure
-        .start_measureing(config.thor.sampling_interval)
+        .start_sampling(config.thor.sampling_interval)
         .expect("Failed to start measuring");
 
     // waiting for Sampler to begin

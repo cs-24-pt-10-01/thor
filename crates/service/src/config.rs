@@ -25,5 +25,6 @@ pub struct IntelConfig {
 pub struct ThorConfig {
     pub remote_packet_queue_cycle: u64,
     pub sampling_interval: u64,
+    pub max_sample_age: u64,
     pub server_ip: String,
 }

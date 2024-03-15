@@ -16,13 +16,13 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
-use crate::component_def::{Build, Listener, Measure, Measurement, StartProcess};
-
-//static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
-//static mut RANGE_MAP: RangeMap<u128, RaplMeasurement> = RangeMap::new();
+use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
 static mut SAMPLING_THREAD_DATA: VecDeque<(RaplMeasurement, u128)> = VecDeque::new();
-pub struct RaplSampler;
+pub struct RaplSampler {
+    pub max_sample_age: u128,
+}
+
 impl Measurement<RaplMeasurement> for RaplSampler {
     fn get_measurement(&self, timestamp: u128) -> RaplMeasurement {
         let result = find_measurement(timestamp);
@@ -30,7 +30,7 @@ impl Measurement<RaplMeasurement> for RaplSampler {
         //deleting old measurements
         unsafe {
             while let Some((_, time)) = SAMPLING_THREAD_DATA.front() {
-                if *time < timestamp - 5000 {
+                if *time < timestamp - self.max_sample_age {
                     SAMPLING_THREAD_DATA.pop_front();
                 } else {
                     break;
@@ -43,7 +43,7 @@ impl Measurement<RaplMeasurement> for RaplSampler {
 }
 
 impl RaplSampler {
-    pub fn start_measureing(&self, sampling_interval: u64) -> Result<()> {
+    pub fn start_sampling(&self, sampling_interval: u64) -> Result<()> {
         thread::spawn(move || {
             rapl_sampling_thread(sampling_interval);
         });
