@@ -7,7 +7,6 @@ use std::{
     thread,
     time::{Duration, SystemTime},
 };
-use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::RaplMeasurement;
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
@@ -124,6 +123,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 ) {
     // Create duration from the config
     let duration = Duration::from_millis(remote_packet_queue_cycle);
+    /*
     // Check if the duration is less than the minimum update interval
     if duration < MINIMUM_CPU_UPDATE_INTERVAL {
         panic!(
@@ -131,6 +131,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             MINIMUM_CPU_UPDATE_INTERVAL
         );
     }
+     */
 
     let mut remote_client_packets = Vec::new();
 
@@ -140,6 +141,10 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
         // Extract local clients initially to allow the sampler getting ahead
         while let Some(local_client_packet) = LOCAL_CLIENT_PACKET_QUEUE.pop() {
             local_client_packets.push_back(local_client_packet);
+            //TODO make this variable
+            if local_client_packets.len() >= 2000 {
+                break;
+            }
         }
 
         // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
@@ -169,7 +174,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
                 for conn in remote_connections_lock.iter_mut() {
                     let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
-                    conn.write_all(&(serialized_packet.len() as u16).to_be_bytes())
+                    conn.write_all(&(serialized_packet.len() as u32).to_be_bytes())
                         .unwrap();
                     conn.write_all(&serialized_packet).unwrap();
                 }
