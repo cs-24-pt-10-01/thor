@@ -22,8 +22,8 @@ use crate::component_def::{Build, Listener, Measure, Measurement, StartProcess};
 //static mut RANGE_MAP: RangeMap<u128, RaplMeasurement> = RangeMap::new();
 
 static mut SAMPLING_THREAD_DATA: VecDeque<(RaplMeasurement, u128)> = VecDeque::new();
-pub struct defMeasure;
-impl Measurement<RaplMeasurement> for defMeasure {
+pub struct RaplSampler;
+impl Measurement<RaplMeasurement> for RaplSampler {
     fn get_measurement(&self, timestamp: u128) -> RaplMeasurement {
         let result = find_measurement(timestamp);
 
@@ -42,7 +42,7 @@ impl Measurement<RaplMeasurement> for defMeasure {
     }
 }
 
-impl defMeasure {
+impl RaplSampler {
     pub fn start_measureing(&self, sampling_interval: u64) -> Result<()> {
         thread::spawn(move || {
             rapl_sampling_thread(sampling_interval);

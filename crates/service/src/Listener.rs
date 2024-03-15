@@ -52,9 +52,9 @@ use crate::{
     measurement,
 };
 
-pub struct DefList {}
+pub struct ListenerImplem {}
 
-impl Listener<RaplMeasurement> for DefList {
+impl Listener<RaplMeasurement> for ListenerImplem {
     #[tokio::main]
     async fn start_listening<S: StartProcess, B: Build, M: Measurement<RaplMeasurement>>(
         &self,
