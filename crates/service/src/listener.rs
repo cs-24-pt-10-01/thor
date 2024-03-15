@@ -1,29 +1,22 @@
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
-use rangemap::RangeMap;
-use serde::Deserialize;
 use std::{
     collections::VecDeque,
-    fs,
     io::Write,
     sync::{Arc, Mutex},
     thread,
     time::{Duration, SystemTime},
 };
 use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
-use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
+use thor_lib::RaplMeasurement;
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
-use crate::config::*;
 //pub const CONFIG: bincode::config::Configuration = bincode::config::standard();
 
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
 
-use crate::{
-    component_def::{Build, Listener, Measure, Measurement, StartProcess},
-    measurement,
-};
+use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
 pub struct ListenerImplem {
     pub ip: String,

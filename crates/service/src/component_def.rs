@@ -1,11 +1,5 @@
 use anyhow::Result;
-use thor_lib::RaplMeasurement;
 
-pub struct Measure {
-    pub timestamp_start: u128,
-    pub timestamp_end: u128,
-    pub measurement: RaplMeasurement, // core
-}
 pub trait Measurement<T> {
     // T is the type of measurement
     fn get_measurement(&self, timestamp: u128) -> T; // hmm how this?
