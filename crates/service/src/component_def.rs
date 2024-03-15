@@ -25,6 +25,5 @@ pub trait Listener<T> {
         start_process: S,
         builder: B,
         measurement: M,
-        port: u16,
     ) -> Result<()>;
 }

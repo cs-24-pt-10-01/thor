@@ -15,35 +15,8 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
+use crate::config::*;
 //pub const CONFIG: bincode::config::Configuration = bincode::config::standard();
-
-#[derive(Debug, Deserialize)]
-struct Config {
-    thor: ThorConfig,
-    amd: AmdConfig,
-    intel: IntelConfig,
-}
-
-#[derive(Debug, Deserialize)]
-struct AmdConfig {
-    core: bool,
-    pkg: bool,
-}
-
-#[derive(Debug, Deserialize)]
-struct IntelConfig {
-    pp0: bool,
-    pp1: bool,
-    pkg: bool,
-    dram: bool,
-}
-
-#[derive(Debug, Deserialize)]
-struct ThorConfig {
-    remote_packet_queue_cycle: u64,
-    sampling_interval: u64,
-    server_ip: String,
-}
 
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
 
@@ -52,7 +25,10 @@ use crate::{
     measurement,
 };
 
-pub struct ListenerImplem {}
+pub struct ListenerImplem {
+    pub ip: String,
+    pub remote_packet_queue_cycle: u64,
+}
 
 impl Listener<RaplMeasurement> for ListenerImplem {
     #[tokio::main]
@@ -61,36 +37,35 @@ impl Listener<RaplMeasurement> for ListenerImplem {
         start_process: S,
         builder: B,
         measurement: M,
-        port: u16,
     ) -> Result<()> {
-        // Load the config file
-        let config_file_data = fs::read_to_string("thor-service.toml")?;
-        let config: Arc<Config> = Arc::new(toml::from_str(&config_file_data)?);
-
         // Setup the RAPL stuff queue
         let remote_tcpstreams = Arc::new(Mutex::new(Vec::new()));
 
         // Spawn thread for sampling
-        //let config_sampling = config.clone();
         // Create a clone of the remote_tcpstreams and the rapl_stuff_queue to pass to the thread
         let remote_tcpstreams_clone = remote_tcpstreams.clone();
-        let config_send_packet_queue = config.clone();
+
+        let ip = self.ip.clone();
 
         thread::spawn(move || {
-            let fut = listen(config_send_packet_queue, remote_tcpstreams_clone);
+            let fut = listen(ip, remote_tcpstreams_clone);
             tokio::runtime::Runtime::new().unwrap().block_on(fut);
         });
 
-        send_packet_to_remote_clients(remote_tcpstreams, config, &measurement);
+        send_packet_to_remote_clients(
+            remote_tcpstreams,
+            self.remote_packet_queue_cycle,
+            &measurement,
+        );
 
         Ok(())
     }
 }
 
-async fn listen(config: Arc<Config>, remote_tcpstreams: Arc<Mutex<Vec<std::net::TcpStream>>>) {
+async fn listen(server_ip: String, remote_tcpstreams: Arc<Mutex<Vec<std::net::TcpStream>>>) {
     // Create a TCP listener
-    println!("Listening on: {}", config.thor.server_ip);
-    let tcp_listener = TcpListener::bind(&config.thor.server_ip).await.unwrap();
+    println!("Listening on: {}", server_ip);
+    let tcp_listener = TcpListener::bind(&server_ip).await.unwrap();
 
     // Enter the main loop
     loop {
@@ -151,12 +126,11 @@ fn handle_remote_connection(
 
 fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
     remote_connections: Arc<Mutex<Vec<std::net::TcpStream>>>,
-    config: Arc<Config>,
+    remote_packet_queue_cycle: u64,
     measurement: &M,
 ) {
     // Create duration from the config
-    let duration = Duration::from_millis(config.thor.remote_packet_queue_cycle);
-
+    let duration = Duration::from_millis(remote_packet_queue_cycle);
     // Check if the duration is less than the minimum update interval
     if duration < MINIMUM_CPU_UPDATE_INTERVAL {
         panic!(
