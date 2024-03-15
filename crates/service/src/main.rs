@@ -25,8 +25,8 @@ fn main() {
         .start_measureing(1000)
         .expect("Failed to start measuring");
 
-    // waiting for measurement to begin
-    sleep(std::time::Duration::from_secs(2));
+    // waiting for Sampler to begin
+    sleep(std::time::Duration::from_secs(1));
 
     let listen = ListenerImplem {};
     let _ = listen.start_listening(start, build, measure, 8080);
