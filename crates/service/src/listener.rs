@@ -28,7 +28,7 @@ impl Listener<RaplMeasurement> for ListenerImplem {
         &self,
         start_process: S,
         builder: B,
-        measurement: M,
+        measurement: &mut M,
     ) -> Result<()> {
         // Setup the RAPL stuff queue
         let remote_tcpstreams = Arc::new(Mutex::new(Vec::new()));
@@ -47,7 +47,7 @@ impl Listener<RaplMeasurement> for ListenerImplem {
         send_packet_to_remote_clients(
             remote_tcpstreams,
             self.remote_packet_queue_cycle,
-            &measurement,
+            measurement,
         );
 
         Ok(())
@@ -119,7 +119,7 @@ fn handle_remote_connection(
 fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
     remote_connections: Arc<Mutex<Vec<std::net::TcpStream>>>,
     remote_packet_queue_cycle: u64,
-    measurement: &M,
+    measurement: &mut M,
 ) {
     // Create duration from the config
     let duration = Duration::from_millis(remote_packet_queue_cycle);
@@ -141,10 +141,6 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
         // Extract local clients initially to allow the sampler getting ahead
         while let Some(local_client_packet) = LOCAL_CLIENT_PACKET_QUEUE.pop() {
             local_client_packets.push_back(local_client_packet);
-            //TODO make this variable
-            if local_client_packets.len() >= 2000 {
-                break;
-            }
         }
 
         // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
@@ -181,6 +177,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                 remote_client_packets.clear();
             }
         }
+        println!("packets: {}", LOCAL_CLIENT_PACKET_QUEUE.len().to_string());
         // Sleep for the duration
         thread::sleep(duration);
     }
@@ -188,9 +185,23 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
     mut local_client_packets: VecDeque<LocalClientPacket>,
-    measurement: &M,
+    measurement: &mut M,
     remote_client_packets: &mut Vec<RemoteClientPacket>,
 ) {
+    let timestamps: Vec<u128> = local_client_packets.iter().map(|x| x.timestamp).collect();
+    let measurements = measurement.get_multiple_measurements(&timestamps);
+
+    // handling multiple packets at a time
+    for x in 0..local_client_packets.len() {
+        let rapl_measurement = measurements[x].clone();
+        let local_client_packet = local_client_packets.pop_front().unwrap();
+        let remote_client_packet = RemoteClientPacket {
+            local_client_packet,
+            rapl_measurement,
+        };
+        remote_client_packets.push(remote_client_packet);
+    }
+    /* sequential
     while let Some(local_client_packet) = local_client_packets.pop_front() {
         // Get the RAPL measurement
         let rapl_measurement = measurement.get_measurement(local_client_packet.timestamp);
@@ -204,4 +215,5 @@ fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
         // Push the remote client packet to the remote client packets vector
         remote_client_packets.push(remote_client_packet);
     }
+    */
 }

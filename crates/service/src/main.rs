@@ -30,12 +30,10 @@ fn main() {
 
     let build = BuilderImplem {};
 
-    let measure = RaplSampler {
-        max_sample_age: config.thor.max_sample_age as u128,
-    };
-    measure
-        .start_sampling(config.thor.sampling_interval)
-        .expect("Failed to start measuring");
+    let mut measure = RaplSampler::new(
+        config.thor.max_sample_age as u128,
+        config.thor.sampling_interval,
+    );
 
     // waiting for Sampler to begin
     sleep(std::time::Duration::from_secs(1));
@@ -44,5 +42,5 @@ fn main() {
         ip: config.thor.server_ip.clone(),
         remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle,
     };
-    let _ = listen.start_listening(start, build, measure);
+    let _ = listen.start_listening(start, build, &mut measure);
 }

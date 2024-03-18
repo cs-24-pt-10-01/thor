@@ -18,49 +18,71 @@ use tokio::{io::AsyncReadExt, net::TcpListener};
 
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
-static mut SAMPLING_THREAD_DATA: VecDeque<(RaplMeasurement, u128)> = VecDeque::new();
+//static mut SAMPLING_THREAD_DATA: VecDeque<(RaplMeasurement, u128)> = VecDeque::new();
+static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
+
 pub struct RaplSampler {
     pub max_sample_age: u128,
+    range_map: RangeMap<u128, RaplMeasurement>,
+    sampling_interval: u64,
 }
 
 impl Measurement<RaplMeasurement> for RaplSampler {
-    fn get_measurement(&self, timestamp: u128) -> RaplMeasurement {
-        let result = find_measurement(timestamp);
+    fn get_measurement(&mut self, timestamp: u128) -> RaplMeasurement {
+        self.update_range_map(timestamp);
 
-        //deleting old measurements
-        unsafe {
-            while let Some((_, time)) = SAMPLING_THREAD_DATA.front() {
-                if *time < timestamp - self.max_sample_age {
-                    SAMPLING_THREAD_DATA.pop_front();
-                } else {
-                    break;
-                }
-            }
+        let result = self
+            .range_map
+            .get(&timestamp)
+            .expect("No measurement found");
+
+        result.clone()
+    }
+
+    fn get_multiple_measurements(&mut self, timestamps: &Vec<u128>) -> Vec<&RaplMeasurement> {
+        let mut result = Vec::new();
+
+        // updating rangemap using the first timestamp
+        self.update_range_map(timestamps[0]);
+
+        // find measurements
+        for timestamp in timestamps {
+            let measurement = self.range_map.get(timestamp).expect("No measurement found");
+            result.push(measurement);
         }
 
+        //return result
         result
     }
 }
 
 impl RaplSampler {
-    pub fn start_sampling(&self, sampling_interval: u64) -> Result<()> {
+    pub fn new(max_sample_age: u128, sampling_interval: u64) -> RaplSampler {
+        let result = RaplSampler {
+            max_sample_age,
+            range_map: RangeMap::new(),
+            sampling_interval,
+        };
+        let _ = result.start_sampling(sampling_interval);
+        result
+    }
+
+    fn start_sampling(&self, sampling_interval: u64) -> Result<()> {
         thread::spawn(move || {
             rapl_sampling_thread(sampling_interval);
         });
         Ok(())
     }
-}
 
-fn find_measurement(timestamp: u128) -> RaplMeasurement {
-    unsafe {
-        let mut last: &RaplMeasurement = &SAMPLING_THREAD_DATA.back().unwrap().0;
-        for (rapl_measurement, time) in SAMPLING_THREAD_DATA.iter().rev() {
-            if *time <= timestamp {
-                return last.clone();
-            }
-            last = rapl_measurement;
+    fn update_range_map(&mut self, timestamp: u128) {
+        // add new measurements
+        while let Some((measurement, time)) = SAMPLING_THREAD_DATA.pop() {
+            self.range_map
+                .insert(time..time + self.sampling_interval as u128, measurement);
         }
-        panic!("No measurement found for timestamp {}", timestamp);
+
+        //remove old measurements
+        self.range_map.remove(0..timestamp - self.max_sample_age);
     }
 }
 
@@ -70,9 +92,8 @@ fn rapl_sampling_thread(sampling_interval: u64) {
         // Grab the RAPL data and the timestamp, then push it to the queue
         let rapl_measurement = read_rapl_msr_registers();
         let timestamp = get_timestamp_millis();
-        unsafe {
-            SAMPLING_THREAD_DATA.push_back((rapl_measurement, timestamp));
-        }
+
+        SAMPLING_THREAD_DATA.push((rapl_measurement, timestamp));
 
         // Sleep for the sampling interval
         thread::sleep(Duration::from_micros(sampling_interval));
