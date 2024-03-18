@@ -22,7 +22,7 @@ use std::{fs, sync::Arc};
 fn main() {
     //getting config
     let config_file_data =
-        fs::read_to_string("thor-service.toml").expect("Failed to read thor-service.toml");
+        fs::read_to_string("thor-server.toml").expect("Failed to read thor-service.toml");
     let config: Arc<Config> =
         Arc::new(toml::from_str(&config_file_data).expect("Failed to parse config"));
 
@@ -34,7 +34,7 @@ fn main() {
         max_sample_age: config.thor.max_sample_age as u128,
     };
     measure
-        .start_sampling(config.thor.sampling_interval)
+        .start_sampling(config.thor.sampling_interval_micros)
         .expect("Failed to start measuring");
 
     // waiting for Sampler to begin
@@ -42,7 +42,7 @@ fn main() {
 
     let listen = ListenerImplem {
         ip: config.thor.server_ip.clone(),
-        remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle,
+        remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle_millis,
     };
     let _ = listen.start_listening(start, build, measure);
 }
