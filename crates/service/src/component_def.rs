@@ -2,7 +2,7 @@ use anyhow::Result;
 
 pub trait Measurement<T> {
     // T is the type of measurement
-    fn get_measurement(&self, timestamp: u128) -> T; // hmm how this?
+    fn get_measurement(&self, timestamp: u128) -> T;
 }
 
 pub trait Build {

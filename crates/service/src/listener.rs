@@ -12,8 +12,6 @@ use thor_lib::RaplMeasurement;
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
-//pub const CONFIG: bincode::config::Configuration = bincode::config::standard();
-
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
 
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
