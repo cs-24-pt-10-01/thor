@@ -18,6 +18,7 @@ use tokio::{io::AsyncReadExt, net::TcpListener};
 
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
+// TODO: The usage of VecDeque in the codebase seems to reflect that of a ringbuffer. Rather than using a static mut along with using unsafe, it could be checked if the implementations are equivalent.
 static mut SAMPLING_THREAD_DATA: VecDeque<(RaplMeasurement, u128)> = VecDeque::new();
 pub struct RaplSampler {
     pub max_sample_age: u128,
