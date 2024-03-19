@@ -22,8 +22,7 @@ pub struct ListenerImplem {
 }
 
 impl Listener<RaplMeasurement> for ListenerImplem {
-    #[tokio::main]
-    async fn start_listening<S: StartProcess, B: Build, M: Measurement<RaplMeasurement>>(
+    fn start_listening<S: StartProcess, B: Build, M: Measurement<RaplMeasurement>>(
         &self,
         start_process: S,
         builder: B,
@@ -200,19 +199,4 @@ fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
         };
         remote_client_packets.push(remote_client_packet);
     }
-    /* sequential
-    while let Some(local_client_packet) = local_client_packets.pop_front() {
-        // Get the RAPL measurement
-        let rapl_measurement = measurement.get_measurement(local_client_packet.timestamp);
-
-        // Construct the remote client packet
-        let remote_client_packet = RemoteClientPacket {
-            local_client_packet,
-            rapl_measurement,
-        };
-
-        // Push the remote client packet to the remote client packets vector
-        remote_client_packets.push(remote_client_packet);
-    }
-    */
 }
