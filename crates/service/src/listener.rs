@@ -7,11 +7,10 @@ use std::{
     thread,
     time::{Duration, SystemTime},
 };
+use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::RaplMeasurement;
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
-
-//pub const CONFIG: bincode::config::Configuration = bincode::config::standard();
 
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
 
