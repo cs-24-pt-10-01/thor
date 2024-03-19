@@ -18,7 +18,6 @@ use tokio::{io::AsyncReadExt, net::TcpListener};
 
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
-//static mut SAMPLING_THREAD_DATA: VecDeque<(RaplMeasurement, u128)> = VecDeque::new();
 static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
 
 pub struct RaplSampler {
@@ -51,7 +50,6 @@ impl Measurement<RaplMeasurement> for RaplSampler {
             result.push(measurement);
         }
 
-        //return result
         result
     }
 }
