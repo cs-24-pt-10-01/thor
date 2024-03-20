@@ -1,22 +1,18 @@
-use crossbeam::queue::SegQueue;
 use csv::{Writer, WriterBuilder};
 use serde::Serialize;
 use std::{
     fs::{File, OpenOptions},
-    io::Write,
-    net::TcpStream,
-    sync::Once,
-    thread,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
-use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
 
-static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
+// TODO: Need to lock here because there can be multiple threads trying to access the same writer
 static mut CSV_WRITER: Option<Writer<File>> = None;
 
 pub fn start_rapl(id: impl AsRef<str>) {
     let rapl_registers = read_rapl_msr_registers();
+
+    let timestamp = get_timestamp_millis();
 
     match rapl_registers {
         RaplMeasurement::Intel(intel) => {
@@ -29,17 +25,18 @@ pub fn start_rapl(id: impl AsRef<str>) {
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
-    let packet = LocalClientPacket {
-        id: id.as_ref().to_string(),
-        process_id: 12345,
-        thread_id: thread_id::get(),
-        operation: LocalClientPacketOperation::Stop,
-        timestamp: SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_millis(),
-    };
-    LOCAL_CLIENT_PACKET_QUEUE.push(packet);
+    let rapl_registers = read_rapl_msr_registers();
+
+    let timestamp = get_timestamp_millis();
+
+    match rapl_registers {
+        RaplMeasurement::Intel(intel) => {
+            write_to_csv(intel, vec!["pp0", "pp1", "pkg", "dram"]).unwrap();
+        }
+        RaplMeasurement::AMD(amd) => {
+            write_to_csv(amd, vec!["core", "pkg"]).unwrap();
+        }
+    }
 }
 
 fn write_to_csv<T, C, U>(data: T, columns: C) -> Result<(), std::io::Error>
