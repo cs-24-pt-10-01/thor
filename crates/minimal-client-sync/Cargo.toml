@@ -1,12 +1,10 @@
 [package]
-name = "thor-minimal-client"
+name = "thor-minimal-client-sync"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "ayy"
-src = "src/"
-crate-type = ["lib", "cdylib", "staticlib"]
+[lib]
+crate-type = ["cdylib"]
 
 [dependencies]
 bincode = { workspace = true }
@@ -14,3 +12,5 @@ serde = { workspace = true }
 thor-shared = { path = "../shared" }
 thread-id = { workspace = true }
 crossbeam = { workspace = true }
+thor-lib = { path = "../lib" }
+csv = "1"
