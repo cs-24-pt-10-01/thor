@@ -6,6 +6,11 @@ use std::{
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
+// Context:
+// This is an example of rapl-interface that is intended to be used in an application that can have mulitple threads calling to start_rapl and stop_rapl.
+// The design of rapl-interface is insufficient due to its lack of thread safety. The CSV_WRITER is a static variable that is shared between threads and is not protected by a lock.
+// This design is changed to perform thread safe operations by using a lock to protect the CSV_WRITER.
+
 // Need extra examples:
 // minimal-client-async-write-lock
 // minimal-client-async-write-lockfree
