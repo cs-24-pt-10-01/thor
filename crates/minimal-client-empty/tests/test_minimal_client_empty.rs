@@ -1,8 +1,8 @@
 use std::ffi::CString;
-use thor_minimal_client_nothing::ffi::{start_rapl, stop_rapl};
+use thor_minimal_client_empty::ffi::{start_rapl, stop_rapl};
 
 #[test]
-fn test_thor_minimal_client_sync_1000_st() {
+fn test_thor_minimal_client_empty_1000_st() {
     let func1 = CString::new("Function1").unwrap();
 
     for _ in 0..1000 {
@@ -12,7 +12,7 @@ fn test_thor_minimal_client_sync_1000_st() {
 }
 
 #[test]
-fn test_thor_minimal_client_sync_1000_mt() {
+fn test_thor_minimal_client_empty_1000_mt() {
     let func1 = CString::new("Function1").unwrap();
 
     // Test for 8 threads 1000 times
