@@ -534,6 +534,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "thor-minimal-client"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "serde",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
 name = "thor-service"
 version = "0.1.0"
 dependencies = [
