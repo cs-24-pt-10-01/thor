@@ -11,8 +11,8 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 // The design of rapl-interface is insufficient due to its lack of thread safety. The CSV_WRITER is a static variable that is shared between threads and is not protected by a lock.
 // This design is changed to perform thread safe operations by using a lock to protect the CSV_WRITER.
 
-// Need extra examples:
-// minimal-client-async-write-lock
+// Need extra examples: (pass to queue (MPMC design), then write to file)
+// minimal-client-async-write-lock (may not be needed this one since the writer thread holds the writer)
 // minimal-client-async-write-lockfree
 
 // TODO: Need to lock here because there can be multiple threads trying to access the same writer
