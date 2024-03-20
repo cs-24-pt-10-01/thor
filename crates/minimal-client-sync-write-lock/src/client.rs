@@ -2,6 +2,7 @@ use csv::{Writer, WriterBuilder};
 use serde::Serialize;
 use std::{
     fs::{File, OpenOptions},
+    sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
@@ -16,7 +17,7 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 // minimal-client-async-write-lockfree (use a lockfree data structure such as a queue)
 
 // TODO: Need to lock here because there can be multiple threads trying to access the same writer
-static mut CSV_WRITER: Option<Writer<File>> = None;
+static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
 
 pub fn start_rapl(id: impl AsRef<str>) {
     let rapl_registers = read_rapl_msr_registers();
@@ -84,28 +85,27 @@ where
     C: IntoIterator<Item = U>,
     U: AsRef<[u8]>,
 {
-    let wtr = match unsafe { CSV_WRITER.as_mut() } {
-        Some(wtr) => wtr,
-        None => {
-            // Open the file to write to CSV. First argument is CPU type, second is RAPL power units
-            let file = OpenOptions::new()
-                .append(true)
-                .create(true)
-                .open(format!("test.csv",))?;
+    // Lock the CSV writer
+    let mut wtr_lock = CSV_WRITER.lock().unwrap();
 
-            // Create the CSV writer
-            let mut wtr = WriterBuilder::new().from_writer(file);
+    // Check if mutex is none
+    if wtr_lock.is_none() {
+        let file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .append(true)
+            .open("rapl_data.csv")?;
 
-            // Write the column names
-            wtr.write_record(columns)?;
+        let mut wtr = WriterBuilder::new().has_headers(false).from_writer(file);
 
-            // Store the CSV writer in a static variable
-            unsafe { CSV_WRITER = Some(wtr) };
+        // Write the headers to the CSV
+        wtr.write_record(columns)?;
 
-            // Return a mutable reference to the CSV writer
-            unsafe { CSV_WRITER.as_mut().expect("failed to get CSV writer") }
-        }
-    };
+        // Set the CSV writer
+        *wtr_lock = Some(wtr);
+    }
+
+    let wtr = wtr_lock.as_mut().unwrap();
 
     // Write the data to the CSV and flush it
     wtr.serialize(data)?;
