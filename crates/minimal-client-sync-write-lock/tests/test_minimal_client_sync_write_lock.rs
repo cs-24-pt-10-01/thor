@@ -9,9 +9,6 @@ fn test_thor_minimal_client_sync_1000_st() {
         unsafe { start_rapl(func1.as_ptr()) };
         unsafe { stop_rapl(func1.as_ptr()) };
     }
-
-    // Sleep for 5 seconds
-    std::thread::sleep(std::time::Duration::from_secs(5));
 }
 
 #[test]
@@ -34,7 +31,4 @@ fn test_thor_minimal_client_sync_1000_mt() {
     for handle in handles {
         handle.join().unwrap();
     }
-
-    // Sleep for 5 seconds
-    std::thread::sleep(std::time::Duration::from_secs(5));
 }
