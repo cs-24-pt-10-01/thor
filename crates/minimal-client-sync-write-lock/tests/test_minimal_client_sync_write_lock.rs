@@ -18,6 +18,7 @@ fn test_thor_minimal_client_sync_1000_st() {
 fn test_thor_minimal_client_sync_1000_mt() {
     let func1 = CString::new("Function1").unwrap();
 
+    // Test for 8 threads 1000 times
     let handles = (0..8)
         .map(|_| {
             let func1 = func1.clone();
