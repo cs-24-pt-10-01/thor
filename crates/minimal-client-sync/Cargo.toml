@@ -3,7 +3,9 @@ name = "thor-minimal-client"
 version = "0.1.0"
 edition = "2021"
 
-[lib]
+[[bin]]
+name = "ayy"
+src = "src/"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
