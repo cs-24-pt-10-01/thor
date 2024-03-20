@@ -12,8 +12,8 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 // This design is changed to perform thread safe operations by using a lock to protect the CSV_WRITER.
 
 // Need extra examples: (pass to queue (MPMC design), then write to file)
-// minimal-client-async-write-lock (may not be needed this one since the writer thread holds the writer)
-// minimal-client-async-write-lockfree
+// minimal-client-async-write-lock (try with a VecDeque that uses a lock)
+// minimal-client-async-write-lockfree (use a lockfree data structure such as a queue)
 
 // TODO: Need to lock here because there can be multiple threads trying to access the same writer
 static mut CSV_WRITER: Option<Writer<File>> = None;
