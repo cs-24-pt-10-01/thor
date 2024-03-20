@@ -30,16 +30,16 @@ pub enum RaplError {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct IntelRaplRegisters {
-    pp0: u64,
-    pp1: u64,
-    pkg: u64,
-    dram: u64,
+    pub pp0: u64,
+    pub pp1: u64,
+    pub pkg: u64,
+    pub dram: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct AmdRaplRegisters {
-    core: u64,
-    pkg: u64,
+    pub core: u64,
+    pub pkg: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]

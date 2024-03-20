@@ -25,10 +25,25 @@ pub fn start_rapl(id: impl AsRef<str>) {
 
     match rapl_registers {
         RaplMeasurement::Intel(intel) => {
-            write_to_csv(intel, vec!["pp0", "pp1", "pkg", "dram"]).unwrap();
+            write_to_csv(
+                (
+                    id.as_ref(),
+                    timestamp,
+                    intel.pp0,
+                    intel.pp1,
+                    intel.pkg,
+                    intel.dram,
+                ),
+                ["id", "timestamp", "pp0", "pp1", "pkg", "dram"],
+            )
+            .unwrap();
         }
         RaplMeasurement::AMD(amd) => {
-            write_to_csv(amd, vec!["core", "pkg"]).unwrap();
+            write_to_csv(
+                (id.as_ref(), timestamp, amd.core, amd.pkg),
+                ["id", "timestamp", "core", "pkg"],
+            )
+            .unwrap();
         }
     }
 }
@@ -40,10 +55,25 @@ pub fn stop_rapl(id: impl AsRef<str>) {
 
     match rapl_registers {
         RaplMeasurement::Intel(intel) => {
-            write_to_csv(intel, vec!["pp0", "pp1", "pkg", "dram"]).unwrap();
+            write_to_csv(
+                (
+                    id.as_ref(),
+                    timestamp,
+                    intel.pp0,
+                    intel.pp1,
+                    intel.pkg,
+                    intel.dram,
+                ),
+                ["id", "timestamp", "pp0", "pp1", "pkg", "dram"],
+            )
+            .unwrap();
         }
         RaplMeasurement::AMD(amd) => {
-            write_to_csv(amd, vec!["core", "pkg"]).unwrap();
+            write_to_csv(
+                (id.as_ref(), timestamp, amd.core, amd.pkg),
+                ["id", "timestamp", "core", "pkg"],
+            )
+            .unwrap();
         }
     }
 }
