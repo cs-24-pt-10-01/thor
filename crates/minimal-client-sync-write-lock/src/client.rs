@@ -6,6 +6,10 @@ use std::{
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
+// Need extra examples:
+// minimal-client-async-write-lock
+// minimal-client-async-write-lockfree
+
 // TODO: Need to lock here because there can be multiple threads trying to access the same writer
 static mut CSV_WRITER: Option<Writer<File>> = None;
 
