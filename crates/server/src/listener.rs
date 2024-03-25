@@ -28,15 +28,15 @@ impl Listener<RaplMeasurement> for ListenerImplem {
         builder: B,
         measurement: &mut M,
     ) -> Result<()> {
-        // Setup the RAPL stuff queue
+        // Creating vector of streams
         let remote_tcpstreams = Arc::new(Mutex::new(Vec::new()));
 
-        // Spawn thread for sampling
-        // Create a clone of the remote_tcpstreams and the rapl_stuff_queue to pass to the thread
+        // Create a clone of the remote_tcpstreams to pass to the thread
         let remote_tcpstreams_clone = remote_tcpstreams.clone();
 
         let ip = self.ip.clone();
 
+        // Creating thread for listening
         thread::spawn(move || {
             let fut = listen(ip, remote_tcpstreams_clone);
             tokio::runtime::Runtime::new().unwrap().block_on(fut);
@@ -175,7 +175,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                 remote_client_packets.clear();
             }
         }
-        println!("packets: {}", LOCAL_CLIENT_PACKET_QUEUE.len().to_string());
+
         // Sleep for the duration
         thread::sleep(duration);
     }
