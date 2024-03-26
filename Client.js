@@ -21,10 +21,12 @@ client.on('data', function (data) {
     if (data.toString('utf-8').endsWith(end)) {
         dataBuffer = Buffer.concat([dataBuffer, data]);
 
-        const json = JSON.parse(dataBuffer.toString().slice(0, -end.length));
+        const dataBufferString = dataBuffer.toString().slice(0, -end.length);
+
+        const json = JSON.parse(dataBufferString);
 
         // Writting to file
-        writeJsonToFile(dataBuffer.toString().slice(0, -end.length), 'data.json');
+        writeJsonToFile(dataBufferString, 'data.json');
 
         // clearing buffer
         dataBuffer = Buffer.alloc(0);
