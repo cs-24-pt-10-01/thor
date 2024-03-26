@@ -6,6 +6,7 @@ const Net = require('net');
 // The port number and hostname of the server.
 const port = 6969;
 const host = "127.0.0.1";
+const end = "end";
 
 const client = new Net.Socket();
 
@@ -17,13 +18,13 @@ client.connect({ port: port, host: host }, function () {
 });
 
 client.on('data', function (data) {
-    if (data.toString('utf-8').endsWith("end")) {
+    if (data.toString('utf-8').endsWith(end)) {
         dataBuffer = Buffer.concat([dataBuffer, data]);
 
-        const json = JSON.parse(dataBuffer.toString().slice(0, -3));
+        const json = JSON.parse(dataBuffer.toString().slice(0, -end.length));
 
         // Writting to file
-        writeJsonToFile(dataBuffer.toString().slice(0, -3), 'data.json');
+        writeJsonToFile(dataBuffer.toString().slice(0, -end.length), 'data.json');
 
         // clearing buffer
         dataBuffer = Buffer.alloc(0);
