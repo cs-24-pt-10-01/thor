@@ -172,8 +172,8 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                     let serialized_packet = serde_json::to_vec(&remote_client_packets).unwrap();
 
                     // sending length of packet
-                    conn.write_all(&(serialized_packet.len() as u32).to_be_bytes())
-                        .unwrap();
+                    //conn.write_all(&(serialized_packet.len() as u32).to_be_bytes())
+                    //    .unwrap();
                     // sending packet
                     conn.write_all(&serialized_packet).unwrap();
                 }
