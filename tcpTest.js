@@ -21,7 +21,6 @@ client.on('data', function (data) {
     dataBuffer = Buffer.concat([dataBuffer, data]);
 
     try {
-        //const temp = { data: dataString };
         const json = JSON.parse(dataBuffer.toString());
         console.log(json);
 
@@ -39,7 +38,7 @@ client.on('data', function (data) {
 function writeJsonToFile(data, dist = 'data.json') {
     // if file exist append to file
     if (fs.existsSync(dist)) {
-        // TODO fix json formatting, [],[] not allowed
+        // TODO fix json formatting, "[],[]" not allowed
         // Appending , to separate data
         fs.appendFile(dist, "," + data, 'utf8', function (err) {
             if (err) throw err;
