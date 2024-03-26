@@ -1,5 +1,6 @@
 use csv::WriterBuilder;
 use serde::Deserialize;
+use serde_json;
 use std::{
     error::Error,
     fs::{self, OpenOptions},
@@ -51,9 +52,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .await
             .unwrap();
 
+        // Converting to rust Vec<RemoteClientPacket> from Json
         let remote_client_packets: Vec<RemoteClientPacket> =
-            bincode::deserialize(&client_buffer).unwrap();
-        //println!("Remote client packet: {:?}", remote_client_packets);
+            serde_json::from_slice(&client_buffer[..packet_length as usize]).unwrap();
         println!("writting to csv");
 
         for remote_client_packet in remote_client_packets {
