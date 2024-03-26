@@ -17,6 +17,9 @@ struct Config {
     server_ip: String,
 }
 
+// Delimiter to define an end of a packet
+const END: &str = "end";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Load the config file
@@ -41,37 +44,40 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Create the CSV writer
     let mut wtr = WriterBuilder::new().from_writer(file);
 
-    let mut client_buffer = vec![0; u32::MAX as usize];
+    let mut client_buffer = Vec::new();
 
     loop {
-        let packet_length = stream.read_u32().await.unwrap();
+        let read_bytes = stream.read_buf(&mut client_buffer).await.unwrap();
+        if read_bytes == 0 {
+            continue;
+        }
 
-        // Read exactly packet_length bytes
-        stream
-            .read_exact(&mut client_buffer[..packet_length as usize])
-            .await
-            .unwrap();
+        if client_buffer.ends_with(END.as_bytes()) {
+            let remote_client_packets: Vec<RemoteClientPacket> =
+                serde_json::from_slice(&&client_buffer[..&client_buffer.len() - END.len()])
+                    .unwrap();
+            println!("writting to csv");
 
-        // Converting to rust Vec<RemoteClientPacket> from Json
-        let remote_client_packets: Vec<RemoteClientPacket> =
-            serde_json::from_slice(&client_buffer[..packet_length as usize]).unwrap();
-        println!("writting to csv");
-
-        for remote_client_packet in remote_client_packets {
-            match remote_client_packet.rapl_measurement {
-                Intel(ref intel_rapl_registers) => {
-                    wtr.serialize((
-                        remote_client_packet.local_client_packet,
-                        intel_rapl_registers,
-                    ))?;
-                    wtr.flush()?;
+            for remote_client_packet in remote_client_packets {
+                match remote_client_packet.rapl_measurement {
+                    Intel(ref intel_rapl_registers) => {
+                        wtr.serialize((
+                            remote_client_packet.local_client_packet,
+                            intel_rapl_registers,
+                        ))?;
+                        wtr.flush()?;
+                    }
+                    AMD(ref amd_rapl_registers) => {
+                        wtr.serialize((
+                            remote_client_packet.local_client_packet,
+                            amd_rapl_registers,
+                        ))?;
+                        wtr.flush()?;
+                    }
                 }
-                AMD(ref amd_rapl_registers) => {
-                    wtr.serialize((remote_client_packet.local_client_packet, amd_rapl_registers))?;
-                    wtr.flush()?;
-                }
+                wtr.flush()?;
             }
-            wtr.flush()?;
+            client_buffer.clear();
         }
     }
 }
