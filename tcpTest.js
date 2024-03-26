@@ -11,34 +11,33 @@ const client = new Net.Socket();
 
 let dataBuffer = Buffer.alloc(0);
 
-
 client.connect({ port: port, host: host }, function () {
     client.write("1"); // indicating client stream
     console.log('Connected');
 });
 
 client.on('data', function (data) {
-    dataBuffer = Buffer.concat([dataBuffer, data]);
+    if (data.toString('utf-8').endsWith("end")) {
+        dataBuffer = Buffer.concat([dataBuffer, data]);
 
-    try {
-        const json = JSON.parse(dataBuffer.toString());
-        console.log(json);
+        const json = JSON.parse(dataBuffer.toString().slice(0, -3));
 
         // Writting to file
-        writeJsonToFile(dataBuffer.toString(), 'data.json');
+        writeJsonToFile(dataBuffer.toString().slice(0, -3), 'data.json');
 
         // clearing buffer
         dataBuffer = Buffer.alloc(0);
     }
-    catch (e) {
-        console.log("Uncomplete Json, waiting for more data...");
+    else {
+        dataBuffer = Buffer.concat([dataBuffer, data]);
     }
 });
 
+// TODO fix json formatting, "[...],[...]" not allowed
 function writeJsonToFile(data, dist = 'data.json') {
+    console.log("Writing to file...");
     // if file exist append to file
     if (fs.existsSync(dist)) {
-        // TODO fix json formatting, "[],[]" not allowed
         // Appending , to separate data
         fs.appendFile(dist, "," + data, 'utf8', function (err) {
             if (err) throw err;
@@ -50,5 +49,4 @@ function writeJsonToFile(data, dist = 'data.json') {
             if (err) throw err;
         });
     }
-
 }

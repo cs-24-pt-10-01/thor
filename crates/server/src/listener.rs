@@ -171,11 +171,14 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                     // Serializing to Json
                     let serialized_packet = serde_json::to_vec(&remote_client_packets).unwrap();
 
-                    // sending length of packet
-                    //conn.write_all(&(serialized_packet.len() as u32).to_be_bytes())
-                    //    .unwrap();
-                    // sending packet
+                    // blocks if the packet is over 1 Mb
+                    if serialized_packet.len() > 1000000 {
+                        conn.set_nonblocking(false).unwrap();
+                    }
                     conn.write_all(&serialized_packet).unwrap();
+                    conn.write("end".as_bytes()).unwrap();
+
+                    conn.set_nonblocking(true).unwrap();
                 }
                 remote_client_packets.clear();
             }
