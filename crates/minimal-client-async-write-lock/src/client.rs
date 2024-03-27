@@ -1,6 +1,7 @@
 use csv::{Writer, WriterBuilder};
 use serde::Serialize;
 use std::{
+    collections::VecDeque,
     fs::{File, OpenOptions},
     sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
@@ -18,6 +19,8 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
 // TODO: Need to lock here because there can be multiple threads trying to access the same writer
 static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
+
+static QUEUE: Mutex<VecDeque<(RaplMeasurement, u128)>> = Mutex::new(VecDeque::new());
 
 pub fn start_rapl(id: impl AsRef<str>) {
     let rapl_registers = read_rapl_msr_registers();
@@ -54,6 +57,9 @@ pub fn stop_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
+    QUEUE.lock().unwrap().push_back((rapl_registers, timestamp));
+
+    /*
     match rapl_registers {
         RaplMeasurement::Intel(intel) => {
             write_to_csv(
@@ -77,6 +83,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             .unwrap();
         }
     }
+    */
 }
 
 fn write_to_csv<T, C, U>(data: T, columns: C) -> Result<(), std::io::Error>
