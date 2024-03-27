@@ -64,10 +64,13 @@ fn background_writer() {
 
     wtr.write_record(["id", "a", "b", "c"]).unwrap();
 
+    let mut data = VecDeque::new();
     loop {
-        let mut queue = QUEUE.lock().unwrap();
+        while let Some(ayo) = QUEUE.lock().unwrap().pop_front() {
+            data.push_back(ayo);
+        }
 
-        while let Some((id, rapl_registers, timestamp)) = queue.pop_front() {
+        while let Some((id, rapl_registers, timestamp)) = data.pop_front() {
             match rapl_registers {
                 RaplMeasurement::Intel(intel) => {
                     wtr.serialize((id, timestamp, intel.pp0, intel.pp1, intel.pkg, intel.dram))
