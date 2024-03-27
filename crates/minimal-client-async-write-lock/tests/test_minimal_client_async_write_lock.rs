@@ -34,4 +34,7 @@ fn test_thor_minimal_client_async_1000_mt() {
     for handle in handles {
         handle.join().unwrap();
     }
+
+    // sleep for 5 seconds
+    std::thread::sleep(std::time::Duration::from_secs(5));
 }

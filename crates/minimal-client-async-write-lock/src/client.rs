@@ -48,6 +48,8 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         .push_back((id.as_ref().to_string(), rapl_registers, timestamp));
 }
 
+static WRITER_INIT: Once = Once::new();
+
 fn background_writer() {
     let file = OpenOptions::new()
         .write(true)
@@ -62,8 +64,6 @@ fn background_writer() {
         thread::sleep(std::time::Duration::from_millis(250));
     }
 
-    wtr.write_record(["id", "a", "b", "c"]).unwrap();
-
     let mut data = VecDeque::new();
     loop {
         while let Some(ayo) = QUEUE.lock().unwrap().pop_front() {
@@ -71,6 +71,17 @@ fn background_writer() {
         }
 
         while let Some((id, rapl_registers, timestamp)) = data.pop_front() {
+            WRITER_INIT.call_once(|| match rapl_registers {
+                RaplMeasurement::Intel(_) => {
+                    wtr.write_record(["id", "timestamp", "pp0", "pp1", "pkg", "dram"])
+                        .unwrap();
+                }
+                RaplMeasurement::AMD(_) => {
+                    wtr.write_record(["id", "timestamp", "core", "pkg"])
+                        .unwrap();
+                }
+            });
+
             match rapl_registers {
                 RaplMeasurement::Intel(intel) => {
                     wtr.serialize((id, timestamp, intel.pp0, intel.pp1, intel.pkg, intel.dram))
@@ -81,6 +92,11 @@ fn background_writer() {
                 }
             }
         }
+
+        wtr.flush().unwrap();
+
+        data.clear();
+
         // sleep 250ms
         thread::sleep(std::time::Duration::from_millis(250));
     }
