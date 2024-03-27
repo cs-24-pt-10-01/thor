@@ -547,6 +547,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "thor-minimal-client-async-lockfree"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "csv",
+ "serde",
+ "thor-lib",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
 name = "thor-minimal-client-empty"
 version = "0.1.0"
 dependencies = [
