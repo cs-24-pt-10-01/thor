@@ -4,6 +4,7 @@ use std::{
     collections::VecDeque,
     fs::{File, OpenOptions},
     sync::{Mutex, Once},
+    thread,
     time::{SystemTime, UNIX_EPOCH},
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
@@ -23,7 +24,7 @@ static RAPL_INIT: Once = Once::new();
 
 pub fn start_rapl(id: impl AsRef<str>) {
     RAPL_INIT.call_once(|| {
-        std::thread::spawn(|| background_writer);
+        thread::spawn(background_writer);
     });
 
     let rapl_registers = read_rapl_msr_registers();
@@ -48,8 +49,6 @@ pub fn stop_rapl(id: impl AsRef<str>) {
 }
 
 fn background_writer() {
-    println!("Starting background writer");
-
     let file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -60,7 +59,7 @@ fn background_writer() {
     let mut wtr = WriterBuilder::new().has_headers(false).from_writer(file);
 
     while QUEUE.lock().unwrap().is_empty() {
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        thread::sleep(std::time::Duration::from_millis(250));
     }
 
     wtr.write_record(["id", "a", "b", "c"]).unwrap();
@@ -80,7 +79,7 @@ fn background_writer() {
             }
         }
         // sleep 250ms
-        std::thread::sleep(std::time::Duration::from_millis(250));
+        thread::sleep(std::time::Duration::from_millis(250));
     }
 }
 
