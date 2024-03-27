@@ -1,9 +1,9 @@
-use csv::{Writer, WriterBuilder};
-use serde::Serialize;
+use crossbeam::queue::SegQueue;
+use csv::WriterBuilder;
 use std::{
     collections::VecDeque,
-    fs::{File, OpenOptions},
-    sync::{Mutex, Once},
+    fs::OpenOptions,
+    sync::Once,
     thread,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -18,7 +18,7 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 // minimal-client-async-write-lock (try with a VecDeque that uses a lock)
 // minimal-client-async-write-lockfree (use a lockfree data structure such as a queue)
 
-static QUEUE: Mutex<VecDeque<(String, RaplMeasurement, u128)>> = Mutex::new(VecDeque::new());
+static QUEUE: SegQueue<(String, RaplMeasurement, u128)> = SegQueue::new();
 
 static RAPL_INIT: Once = Once::new();
 
@@ -31,10 +31,7 @@ pub fn start_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
-    QUEUE
-        .lock()
-        .unwrap()
-        .push_back((id.as_ref().to_string(), rapl_registers, timestamp));
+    QUEUE.push((id.as_ref().to_string(), rapl_registers, timestamp));
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
@@ -42,10 +39,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
-    QUEUE
-        .lock()
-        .unwrap()
-        .push_back((id.as_ref().to_string(), rapl_registers, timestamp));
+    QUEUE.push((id.as_ref().to_string(), rapl_registers, timestamp));
 }
 
 static WRITER_INIT: Once = Once::new();
@@ -60,13 +54,13 @@ fn background_writer() {
 
     let mut wtr = WriterBuilder::new().has_headers(false).from_writer(file);
 
-    while QUEUE.lock().unwrap().is_empty() {
+    while QUEUE.is_empty() {
         thread::sleep(std::time::Duration::from_millis(250));
     }
 
     let mut data = VecDeque::new();
     loop {
-        while let Some(ayo) = QUEUE.lock().unwrap().pop_front() {
+        while let Some(ayo) = QUEUE.pop() {
             data.push_back(ayo);
         }
 
@@ -100,41 +94,6 @@ fn background_writer() {
         // sleep 250ms
         thread::sleep(std::time::Duration::from_millis(250));
     }
-}
-
-fn write_to_csv<T, C, U>(data: T, columns: C) -> Result<(), std::io::Error>
-where
-    T: Serialize,
-    C: IntoIterator<Item = U>,
-    U: AsRef<[u8]>,
-{
-    // Lock the CSV writer
-    /*let mut wtr_lock = CSV_WRITER.lock().unwrap();
-
-    // Check if mutex is none
-    if wtr_lock.is_none() {
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .append(true)
-            .open("rapl_data.csv")?;
-
-        let mut wtr = WriterBuilder::new().has_headers(false).from_writer(file);
-
-        // Write the headers to the CSV
-        wtr.write_record(columns)?;
-
-        // Set the CSV writer
-        *wtr_lock = Some(wtr);
-    }
-
-    let wtr = wtr_lock.as_mut().unwrap();
-
-    // Write the data to the CSV and flush it
-    wtr.serialize(data)?;
-    wtr.flush()?;*/
-
-    Ok(())
 }
 
 fn get_timestamp_millis() -> u128 {
