@@ -177,7 +177,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                     }
                     // sending packets
                     conn.write_all(&serialized_packet).unwrap();
-                    conn.write("end".as_bytes()).unwrap();
+                    conn.write_all("end".as_bytes()).unwrap();
 
                     conn.set_nonblocking(true).unwrap();
                 }
