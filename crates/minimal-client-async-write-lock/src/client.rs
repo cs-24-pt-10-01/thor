@@ -1,8 +1,7 @@
-use csv::{Writer, WriterBuilder};
-use serde::Serialize;
+use csv::WriterBuilder;
 use std::{
     collections::VecDeque,
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     sync::{Mutex, Once},
     thread,
     time::{SystemTime, UNIX_EPOCH},
@@ -100,41 +99,6 @@ fn background_writer() {
         // sleep 250ms
         thread::sleep(std::time::Duration::from_millis(250));
     }
-}
-
-fn write_to_csv<T, C, U>(data: T, columns: C) -> Result<(), std::io::Error>
-where
-    T: Serialize,
-    C: IntoIterator<Item = U>,
-    U: AsRef<[u8]>,
-{
-    // Lock the CSV writer
-    /*let mut wtr_lock = CSV_WRITER.lock().unwrap();
-
-    // Check if mutex is none
-    if wtr_lock.is_none() {
-        let file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .append(true)
-            .open("rapl_data.csv")?;
-
-        let mut wtr = WriterBuilder::new().has_headers(false).from_writer(file);
-
-        // Write the headers to the CSV
-        wtr.write_record(columns)?;
-
-        // Set the CSV writer
-        *wtr_lock = Some(wtr);
-    }
-
-    let wtr = wtr_lock.as_mut().unwrap();
-
-    // Write the data to the CSV and flush it
-    wtr.serialize(data)?;
-    wtr.flush()?;*/
-
-    Ok(())
 }
 
 fn get_timestamp_millis() -> u128 {
