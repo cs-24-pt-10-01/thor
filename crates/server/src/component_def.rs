@@ -2,7 +2,10 @@ use anyhow::Result;
 
 pub trait Measurement<T> {
     // T is the type of measurement
-    fn get_measurement(&self, timestamp: u128) -> T;
+    fn get_measurement(&mut self, timestamp: u128) -> T;
+
+    // for matching multiple measurements at a time
+    fn get_multiple_measurements(&mut self, timestamps: &Vec<u128>) -> Vec<&T>;
 }
 
 pub trait Build {
@@ -18,6 +21,6 @@ pub trait Listener<T> {
         &self,
         start_process: S,
         builder: B,
-        measurement: M,
+        measurement: &mut M,
     ) -> Result<()>;
 }
