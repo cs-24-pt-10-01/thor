@@ -17,7 +17,7 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 // minimal-client-async-write-lock (try with a VecDeque that uses a lock)
 // minimal-client-async-write-lockfree (use a lockfree data structure such as a queue)
 
-static QUEUE: Mutex<VecDeque<(RaplMeasurement, u128)>> = Mutex::new(VecDeque::new());
+static QUEUE: Mutex<VecDeque<(String, RaplMeasurement, u128)>> = Mutex::new(VecDeque::new());
 
 static RAPL_INIT: Once = Once::new();
 
@@ -30,7 +30,10 @@ pub fn start_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
-    QUEUE.lock().unwrap().push_back((rapl_registers, timestamp));
+    QUEUE
+        .lock()
+        .unwrap()
+        .push_back((id.as_ref().to_string(), rapl_registers, timestamp));
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
@@ -38,7 +41,10 @@ pub fn stop_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
-    QUEUE.lock().unwrap().push_back((rapl_registers, timestamp));
+    QUEUE
+        .lock()
+        .unwrap()
+        .push_back((id.as_ref().to_string(), rapl_registers, timestamp));
 }
 
 fn background_writer() {
@@ -62,14 +68,14 @@ fn background_writer() {
     loop {
         let mut queue = QUEUE.lock().unwrap();
 
-        while let Some((rapl_registers, timestamp)) = queue.pop_front() {
+        while let Some((id, rapl_registers, timestamp)) = queue.pop_front() {
             match rapl_registers {
                 RaplMeasurement::Intel(intel) => {
-                    wtr.serialize(("id", timestamp, intel.pp0, intel.pp1, intel.pkg, intel.dram))
+                    wtr.serialize((id, timestamp, intel.pp0, intel.pp1, intel.pkg, intel.dram))
                         .unwrap();
                 }
                 RaplMeasurement::AMD(amd) => {
-                    wtr.serialize(("id", timestamp, amd.core, amd.pkg)).unwrap();
+                    wtr.serialize((id, timestamp, amd.core, amd.pkg)).unwrap();
                 }
             }
         }
