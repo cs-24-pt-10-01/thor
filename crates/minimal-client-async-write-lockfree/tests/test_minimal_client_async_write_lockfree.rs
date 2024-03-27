@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use thor_minimal_client_async_lock::ffi::{start_rapl, stop_rapl};
+use thor_minimal_client_async_lockfree::ffi::{start_rapl, stop_rapl};
 
 #[test]
 fn test_thor_minimal_client_async_1000_st() {
