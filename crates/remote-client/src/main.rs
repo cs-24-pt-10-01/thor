@@ -40,10 +40,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Create the CSV writer
     let mut wtr = WriterBuilder::new().from_writer(file);
 
-    let mut client_buffer = vec![0; u16::MAX as usize];
+    let mut client_buffer = vec![0; u32::MAX as usize];
 
     loop {
-        let packet_length = stream.read_u16().await.unwrap();
+        let packet_length = stream.read_u32().await.unwrap();
 
         // Read exactly packet_length bytes
         stream
