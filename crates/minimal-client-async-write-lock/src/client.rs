@@ -3,7 +3,7 @@ use serde::Serialize;
 use std::{
     collections::VecDeque,
     fs::{File, OpenOptions},
-    sync::Mutex,
+    sync::{Mutex, Once},
     time::{SystemTime, UNIX_EPOCH},
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
@@ -17,39 +17,20 @@ use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 // minimal-client-async-write-lock (try with a VecDeque that uses a lock)
 // minimal-client-async-write-lockfree (use a lockfree data structure such as a queue)
 
-// TODO: Need to lock here because there can be multiple threads trying to access the same writer
-static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
-
 static QUEUE: Mutex<VecDeque<(RaplMeasurement, u128)>> = Mutex::new(VecDeque::new());
 
+static RAPL_INIT: Once = Once::new();
+
 pub fn start_rapl(id: impl AsRef<str>) {
+    RAPL_INIT.call_once(|| {
+        std::thread::spawn(|| background_writer);
+    });
+
     let rapl_registers = read_rapl_msr_registers();
 
     let timestamp = get_timestamp_millis();
 
-    match rapl_registers {
-        RaplMeasurement::Intel(intel) => {
-            write_to_csv(
-                (
-                    id.as_ref(),
-                    timestamp,
-                    intel.pp0,
-                    intel.pp1,
-                    intel.pkg,
-                    intel.dram,
-                ),
-                ["id", "timestamp", "pp0", "pp1", "pkg", "dram"],
-            )
-            .unwrap();
-        }
-        RaplMeasurement::AMD(amd) => {
-            write_to_csv(
-                (id.as_ref(), timestamp, amd.core, amd.pkg),
-                ["id", "timestamp", "core", "pkg"],
-            )
-            .unwrap();
-        }
-    }
+    QUEUE.lock().unwrap().push_back((rapl_registers, timestamp));
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
@@ -58,32 +39,43 @@ pub fn stop_rapl(id: impl AsRef<str>) {
     let timestamp = get_timestamp_millis();
 
     QUEUE.lock().unwrap().push_back((rapl_registers, timestamp));
+}
 
-    /*
-    match rapl_registers {
-        RaplMeasurement::Intel(intel) => {
-            write_to_csv(
-                (
-                    id.as_ref(),
-                    timestamp,
-                    intel.pp0,
-                    intel.pp1,
-                    intel.pkg,
-                    intel.dram,
-                ),
-                ["id", "timestamp", "pp0", "pp1", "pkg", "dram"],
-            )
-            .unwrap();
-        }
-        RaplMeasurement::AMD(amd) => {
-            write_to_csv(
-                (id.as_ref(), timestamp, amd.core, amd.pkg),
-                ["id", "timestamp", "core", "pkg"],
-            )
-            .unwrap();
-        }
+fn background_writer() {
+    println!("Starting background writer");
+
+    let file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open("rapl_data.csv")
+        .unwrap();
+
+    let mut wtr = WriterBuilder::new().has_headers(false).from_writer(file);
+
+    while QUEUE.lock().unwrap().is_empty() {
+        std::thread::sleep(std::time::Duration::from_millis(250));
     }
-    */
+
+    wtr.write_record(["id", "a", "b", "c"]).unwrap();
+
+    loop {
+        let mut queue = QUEUE.lock().unwrap();
+
+        while let Some((rapl_registers, timestamp)) = queue.pop_front() {
+            match rapl_registers {
+                RaplMeasurement::Intel(intel) => {
+                    wtr.serialize(("id", timestamp, intel.pp0, intel.pp1, intel.pkg, intel.dram))
+                        .unwrap();
+                }
+                RaplMeasurement::AMD(amd) => {
+                    wtr.serialize(("id", timestamp, amd.core, amd.pkg)).unwrap();
+                }
+            }
+        }
+        // sleep 250ms
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
 }
 
 fn write_to_csv<T, C, U>(data: T, columns: C) -> Result<(), std::io::Error>
@@ -93,7 +85,7 @@ where
     U: AsRef<[u8]>,
 {
     // Lock the CSV writer
-    let mut wtr_lock = CSV_WRITER.lock().unwrap();
+    /*let mut wtr_lock = CSV_WRITER.lock().unwrap();
 
     // Check if mutex is none
     if wtr_lock.is_none() {
@@ -116,7 +108,7 @@ where
 
     // Write the data to the CSV and flush it
     wtr.serialize(data)?;
-    wtr.flush()?;
+    wtr.flush()?;*/
 
     Ok(())
 }

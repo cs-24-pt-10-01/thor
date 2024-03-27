@@ -2,17 +2,20 @@ use std::ffi::CString;
 use thor_minimal_client_async_lock::ffi::{start_rapl, stop_rapl};
 
 #[test]
-fn test_thor_minimal_client_sync_1000_st() {
+fn test_thor_minimal_client_async_1000_st() {
     let func1 = CString::new("Function1").unwrap();
 
     for _ in 0..1000 {
         unsafe { start_rapl(func1.as_ptr()) };
         unsafe { stop_rapl(func1.as_ptr()) };
     }
+
+    // sleep for 5 seconds
+    std::thread::sleep(std::time::Duration::from_secs(5));
 }
 
 #[test]
-fn test_thor_minimal_client_sync_1000_mt() {
+fn test_thor_minimal_client_async_1000_mt() {
     let func1 = CString::new("Function1").unwrap();
 
     // Test for 8 threads 1000 times
