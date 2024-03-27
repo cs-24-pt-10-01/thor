@@ -1,5 +1,5 @@
 [package]
-name = "thor-service"
+name = "thor-server"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,6 +12,7 @@ crossbeam = { workspace = true }
 num_cpus = { workspace = true }
 rangemap = { workspace = true }
 serde = { workspace = true }
+serde_json = "1.0.114"
 sysinfo = { workspace = true }
 thor-lib = { path = "../lib" }
 thor-shared = { path = "../shared" }
