@@ -168,7 +168,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
                 for conn in remote_connections_lock.iter_mut() {
                     let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
-                    conn.write_all(&(serialized_packet.len() as u32).to_be_bytes())
+                    conn.write_all(&(serialized_packet.len() as u16).to_be_bytes())
                         .unwrap();
                     conn.write_all(&serialized_packet).unwrap();
                 }
