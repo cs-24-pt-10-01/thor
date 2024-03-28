@@ -158,6 +158,47 @@ pub fn read_rapl_msr_registers() -> RaplMeasurement {
     read_rapl_measurement()
 }
 
+pub fn read_rapl_msr_registers_as_joules(
+    prev_rapl_measurement: Option<RaplMeasurement>,
+) -> RaplMeasurement {
+    let ayy = read_rapl_msr_registers();
+
+    let power_unit = *RAPL_POWER_UNITS.get_or_init(|| read_rapl_msr_power_unit());
+
+    // Shift the power unit by 8 bits and then AND it with 0x1f
+    let joule_unit = (power_unit >> 8) & 0x1f;
+
+    // do mod pow 0.5 ^ joule_unit
+    let val = 0.5f64.powf(joule_unit as f64);
+
+    // TODO: Overflow check, cba rn
+    if let Some(prev_rapl_measurement) = prev_rapl_measurement {}
+
+    let testy = match ayy {
+        RaplMeasurement::Intel(registers) => {
+            let pp0 = registers.pp0 >> joule_unit;
+            let pp1 = registers.pp1 >> joule_unit;
+            let pkg = registers.pkg >> joule_unit;
+            let dram = registers.dram >> joule_unit;
+
+            RaplMeasurement::Intel(IntelRaplRegisters {
+                pp0,
+                pp1,
+                pkg,
+                dram,
+            })
+        }
+        RaplMeasurement::AMD(registers) => {
+            let core = registers.core >> joule_unit;
+            let pkg = registers.pkg >> joule_unit;
+
+            RaplMeasurement::AMD(AmdRaplRegisters { core, pkg })
+        }
+    };
+
+    testy
+}
+
 /// Read the RAPL MSR power unit register. This is a separate function because it is only needed once.
 pub fn read_rapl_msr_power_unit() -> u64 {
     RAPL_INIT.call_once(|| {
