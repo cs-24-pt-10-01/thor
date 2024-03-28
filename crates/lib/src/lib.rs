@@ -181,7 +181,7 @@ pub fn read_rapl_msr_registers() -> RaplMeasurement {
 pub fn read_rapl_msr_registers_as_joules(
     prev_rapl_measurement: Option<RaplMeasurementJoules>,
 ) -> RaplMeasurementJoules {
-    let ayy = read_rapl_msr_registers();
+    let rapl_registers = read_rapl_msr_registers();
 
     let power_unit = *RAPL_POWER_UNITS.get_or_init(|| read_rapl_msr_power_unit());
 
@@ -194,7 +194,7 @@ pub fn read_rapl_msr_registers_as_joules(
     // TODO: Overflow check, cba rn
     if let Some(prev_rapl_measurement) = prev_rapl_measurement {}
 
-    let testy = match ayy {
+    match rapl_registers {
         RaplMeasurement::Intel(registers) => {
             let pp0 = registers.pp0 as f64 * energy_unit;
             let pp1 = registers.pp1 as f64 * energy_unit;
@@ -214,9 +214,7 @@ pub fn read_rapl_msr_registers_as_joules(
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
         }
-    };
-
-    testy
+    }
 }
 
 /// Read the RAPL MSR power unit register. This is a separate function because it is only needed once.
