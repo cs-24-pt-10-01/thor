@@ -61,7 +61,7 @@ impl RaplSampler {
             range_map: RangeMap::new(),
             sampling_interval,
         };
-        let _ = result.start_sampling(sampling_interval);
+        result.start_sampling(sampling_interval).unwrap();
         result
     }
 

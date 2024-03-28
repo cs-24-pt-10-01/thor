@@ -42,5 +42,5 @@ fn main() {
         ip: config.thor.server_ip.clone(),
         remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle_millis,
     };
-    let _ = listen.start_listening(start, build, &mut measure);
+    listen.start_listening(start, build, &mut measure).unwrap();
 }
