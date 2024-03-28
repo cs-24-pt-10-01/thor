@@ -56,8 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             let remote_client_packets: Vec<RemoteClientPacket> =
                 serde_json::from_slice(&&client_buffer[..&client_buffer.len() - END.len()])
                     .unwrap();
-            println!("writting to csv");
-
+            // Write the measurements to the CSV file
             for remote_client_packet in remote_client_packets {
                 match remote_client_packet.rapl_measurement {
                     Intel(ref intel_rapl_registers) => {
