@@ -116,6 +116,26 @@ pub enum RaplMeasurement {
     AMD(AmdRaplRegisters),
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub struct IntelRaplRegistersJoules {
+    pp0: u64,
+    pp1: u64,
+    pkg: u64,
+    dram: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub struct AmdRaplRegistersJoules {
+    core: u64,
+    pkg: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+pub enum RaplMeasurementJoules {
+    Intel(IntelRaplRegistersJoules),
+    AMD(AmdRaplRegistersJoules),
+}
+
 #[bitfield(u64)]
 #[derive(PartialEq, Eq)] // <- Attributes after `bitfield` are carried over
 struct IntelRaplPowerUnits {
@@ -160,7 +180,7 @@ pub fn read_rapl_msr_registers() -> RaplMeasurement {
 
 pub fn read_rapl_msr_registers_as_joules(
     prev_rapl_measurement: Option<RaplMeasurement>,
-) -> RaplMeasurement {
+) -> RaplMeasurementJoules {
     let ayy = read_rapl_msr_registers();
 
     let power_unit = *RAPL_POWER_UNITS.get_or_init(|| read_rapl_msr_power_unit());
@@ -181,7 +201,7 @@ pub fn read_rapl_msr_registers_as_joules(
             let pkg = registers.pkg * val;
             let dram = registers.dram * val;
 
-            RaplMeasurement::Intel(IntelRaplRegisters {
+            RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
                 pp0,
                 pp1,
                 pkg,
@@ -192,7 +212,7 @@ pub fn read_rapl_msr_registers_as_joules(
             let core = registers.core * val;
             let pkg = registers.pkg * val;
 
-            RaplMeasurement::AMD(AmdRaplRegisters { core, pkg })
+            RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
         }
     };
 
