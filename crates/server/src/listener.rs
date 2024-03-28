@@ -147,7 +147,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 
         if local_client_packets.is_empty() {
             //keeping the sampler alive
-            let _ = measurement.get_measurement(
+            measurement.get_measurement(
                 SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
