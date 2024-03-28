@@ -23,6 +23,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let config: Config = toml::from_str(&config_file_data)?;
 
     // Connect to the server
+    println!("Connecting to server at: {}", config.server_ip);
     let mut stream = TcpStream::connect(config.server_ip).await.unwrap();
 
     // Signify which type of client this is (it is a local client)
@@ -39,10 +40,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // Create the CSV writer
     let mut wtr = WriterBuilder::new().from_writer(file);
 
-    let mut client_buffer = vec![0; u16::MAX as usize];
+    let mut client_buffer = vec![0; u32::MAX as usize];
 
     loop {
-        let packet_length = stream.read_u16().await.unwrap();
+        let packet_length = stream.read_u32().await.unwrap();
 
         // Read exactly packet_length bytes
         stream
@@ -52,7 +53,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         let remote_client_packets: Vec<RemoteClientPacket> =
             bincode::deserialize(&client_buffer).unwrap();
-        println!("Remote client packet: {:?}", remote_client_packets);
+        //println!("Remote client packet: {:?}", remote_client_packets);
+        println!("Writing to csv");
 
         for remote_client_packet in remote_client_packets {
             match remote_client_packet.rapl_measurement {
