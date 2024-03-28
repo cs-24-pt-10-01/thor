@@ -116,21 +116,21 @@ pub enum RaplMeasurement {
     AMD(AmdRaplRegisters),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct IntelRaplRegistersJoules {
-    pp0: u64,
-    pp1: u64,
-    pkg: u64,
-    dram: u64,
+    pp0: f64,
+    pp1: f64,
+    pkg: f64,
+    dram: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct AmdRaplRegistersJoules {
-    core: u64,
-    pkg: u64,
+    core: f64,
+    pkg: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum RaplMeasurementJoules {
     Intel(IntelRaplRegistersJoules),
     AMD(AmdRaplRegistersJoules),
@@ -179,7 +179,7 @@ pub fn read_rapl_msr_registers() -> RaplMeasurement {
 }
 
 pub fn read_rapl_msr_registers_as_joules(
-    prev_rapl_measurement: Option<RaplMeasurement>,
+    prev_rapl_measurement: Option<RaplMeasurementJoules>,
 ) -> RaplMeasurementJoules {
     let ayy = read_rapl_msr_registers();
 
@@ -189,17 +189,17 @@ pub fn read_rapl_msr_registers_as_joules(
     let joule_unit = (power_unit >> 8) & 0x1f;
 
     // do mod pow 0.5 ^ joule_unit
-    let val = 0.5f64.powf(joule_unit as f64) as u64;
+    let energy_unit = 0.5f64.powi(joule_unit as i32);
 
     // TODO: Overflow check, cba rn
     if let Some(prev_rapl_measurement) = prev_rapl_measurement {}
 
     let testy = match ayy {
         RaplMeasurement::Intel(registers) => {
-            let pp0 = registers.pp0 * val;
-            let pp1 = registers.pp1 * val;
-            let pkg = registers.pkg * val;
-            let dram = registers.dram * val;
+            let pp0 = registers.pp0 as f64 * energy_unit;
+            let pp1 = registers.pp1 as f64 * energy_unit;
+            let pkg = registers.pkg as f64 * energy_unit;
+            let dram = registers.dram as f64 * energy_unit;
 
             RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
                 pp0,
@@ -209,8 +209,8 @@ pub fn read_rapl_msr_registers_as_joules(
             })
         }
         RaplMeasurement::AMD(registers) => {
-            let core = registers.core * val;
-            let pkg = registers.pkg * val;
+            let core = registers.core as f64 * energy_unit;
+            let pkg = registers.pkg as f64 * energy_unit;
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
         }
