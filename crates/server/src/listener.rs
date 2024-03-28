@@ -1,5 +1,6 @@
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
+use serde_json;
 use std::{
     collections::VecDeque,
     io::Write,
@@ -167,10 +168,18 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             // Send the remote client packets to the remote clients if there is any connections available
             if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
                 for conn in remote_connections_lock.iter_mut() {
-                    let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
-                    conn.write_all(&(serialized_packet.len() as u32).to_be_bytes())
-                        .unwrap();
+                    // Serializing to Json
+                    let serialized_packet = serde_json::to_vec(&remote_client_packets).unwrap();
+
+                    // blocks if the packets is over 1 Mb
+                    if serialized_packet.len() > 1000000 {
+                        conn.set_nonblocking(false).unwrap();
+                    }
+                    // sending packets
                     conn.write_all(&serialized_packet).unwrap();
+                    conn.write_all("end".as_bytes()).unwrap();
+
+                    conn.set_nonblocking(true).unwrap();
                 }
                 remote_client_packets.clear();
             }
