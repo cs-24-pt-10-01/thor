@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         let remote_client_packets: Vec<RemoteClientPacket> =
             bincode::deserialize(&client_buffer).unwrap();
         //println!("Remote client packet: {:?}", remote_client_packets);
-        println!("writting to csv");
+        println!("Writing to csv");
 
         for remote_client_packet in remote_client_packets {
             match remote_client_packet.rapl_measurement {
