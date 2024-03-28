@@ -169,17 +169,17 @@ pub fn read_rapl_msr_registers_as_joules(
     let joule_unit = (power_unit >> 8) & 0x1f;
 
     // do mod pow 0.5 ^ joule_unit
-    let val = 0.5f64.powf(joule_unit as f64);
+    let val = 0.5f64.powf(joule_unit as f64) as u64;
 
     // TODO: Overflow check, cba rn
     if let Some(prev_rapl_measurement) = prev_rapl_measurement {}
 
     let testy = match ayy {
         RaplMeasurement::Intel(registers) => {
-            let pp0 = registers.pp0 >> joule_unit;
-            let pp1 = registers.pp1 >> joule_unit;
-            let pkg = registers.pkg >> joule_unit;
-            let dram = registers.dram >> joule_unit;
+            let pp0 = registers.pp0 * val;
+            let pp1 = registers.pp1 * val;
+            let pkg = registers.pkg * val;
+            let dram = registers.dram * val;
 
             RaplMeasurement::Intel(IntelRaplRegisters {
                 pp0,
@@ -189,8 +189,8 @@ pub fn read_rapl_msr_registers_as_joules(
             })
         }
         RaplMeasurement::AMD(registers) => {
-            let core = registers.core >> joule_unit;
-            let pkg = registers.pkg >> joule_unit;
+            let core = registers.core * val;
+            let pkg = registers.pkg * val;
 
             RaplMeasurement::AMD(AmdRaplRegisters { core, pkg })
         }
