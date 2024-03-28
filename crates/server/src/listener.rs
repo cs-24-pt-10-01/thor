@@ -1,5 +1,6 @@
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
+use serde_json;
 use std::{
     collections::VecDeque,
     io::Write,
@@ -22,22 +23,21 @@ pub struct ListenerImplem {
 }
 
 impl Listener<RaplMeasurement> for ListenerImplem {
-    #[tokio::main]
-    async fn start_listening<S: StartProcess, B: Build, M: Measurement<RaplMeasurement>>(
+    fn start_listening<S: StartProcess, B: Build, M: Measurement<RaplMeasurement>>(
         &self,
         start_process: S,
         builder: B,
-        measurement: M,
+        measurement: &mut M,
     ) -> Result<()> {
-        // Setup the RAPL stuff queue
+        // Creating vector of streams
         let remote_tcpstreams = Arc::new(Mutex::new(Vec::new()));
 
-        // Spawn thread for sampling
-        // Create a clone of the remote_tcpstreams and the rapl_stuff_queue to pass to the thread
+        // Create a clone of the remote_tcpstreams to pass to the thread
         let remote_tcpstreams_clone = remote_tcpstreams.clone();
 
         let ip = self.ip.clone();
 
+        // Creating thread for listening
         thread::spawn(move || {
             let fut = listen(ip, remote_tcpstreams_clone);
             tokio::runtime::Runtime::new().unwrap().block_on(fut);
@@ -46,7 +46,7 @@ impl Listener<RaplMeasurement> for ListenerImplem {
         send_packet_to_remote_clients(
             remote_tcpstreams,
             self.remote_packet_queue_cycle,
-            &measurement,
+            measurement,
         );
 
         Ok(())
@@ -118,10 +118,11 @@ fn handle_remote_connection(
 fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
     remote_connections: Arc<Mutex<Vec<std::net::TcpStream>>>,
     remote_packet_queue_cycle: u64,
-    measurement: &M,
+    measurement: &mut M,
 ) {
     // Create duration from the config
     let duration = Duration::from_millis(remote_packet_queue_cycle);
+    /*
     // Check if the duration is less than the minimum update interval
     if duration < MINIMUM_CPU_UPDATE_INTERVAL {
         panic!(
@@ -129,6 +130,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             MINIMUM_CPU_UPDATE_INTERVAL
         );
     }
+     */
 
     let mut remote_client_packets = Vec::new();
 
@@ -146,7 +148,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 
         if local_client_packets.is_empty() {
             //keeping the sampler alive
-            let _ = measurement.get_measurement(
+            measurement.get_measurement(
                 SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
@@ -166,14 +168,23 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             // Send the remote client packets to the remote clients if there is any connections available
             if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
                 for conn in remote_connections_lock.iter_mut() {
-                    let serialized_packet = bincode::serialize(&remote_client_packets).unwrap();
-                    conn.write_all(&(serialized_packet.len() as u16).to_be_bytes())
-                        .unwrap();
+                    // Serializing to Json
+                    let serialized_packet = serde_json::to_vec(&remote_client_packets).unwrap();
+
+                    // blocks if the packets is over 1 Mb
+                    if serialized_packet.len() > 1000000 {
+                        conn.set_nonblocking(false).unwrap();
+                    }
+                    // sending packets
                     conn.write_all(&serialized_packet).unwrap();
+                    conn.write_all("end".as_bytes()).unwrap();
+
+                    conn.set_nonblocking(true).unwrap();
                 }
                 remote_client_packets.clear();
             }
         }
+
         // Sleep for the duration
         thread::sleep(duration);
     }
@@ -181,20 +192,20 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
     mut local_client_packets: VecDeque<LocalClientPacket>,
-    measurement: &M,
+    measurement: &mut M,
     remote_client_packets: &mut Vec<RemoteClientPacket>,
 ) {
-    while let Some(local_client_packet) = local_client_packets.pop_front() {
-        // Get the RAPL measurement
-        let rapl_measurement = measurement.get_measurement(local_client_packet.timestamp);
+    let timestamps: Vec<u128> = local_client_packets.iter().map(|x| x.timestamp).collect();
+    let measurements = measurement.get_multiple_measurements(&timestamps);
 
-        // Construct the remote client packet
+    // handling multiple packets at a time
+    for x in 0..local_client_packets.len() {
+        let rapl_measurement = measurements[x].clone();
+        let local_client_packet = local_client_packets.pop_front().unwrap();
         let remote_client_packet = RemoteClientPacket {
             local_client_packet,
             rapl_measurement,
         };
-
-        // Push the remote client packet to the remote client packets vector
         remote_client_packets.push(remote_client_packet);
     }
 }
