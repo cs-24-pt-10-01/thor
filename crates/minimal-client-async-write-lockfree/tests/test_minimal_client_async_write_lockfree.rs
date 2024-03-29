@@ -14,6 +14,7 @@ fn test_thor_minimal_client_async_lockfree_1000_st() {
     std::thread::sleep(std::time::Duration::from_secs(5));
 }
 
+// cargo test --release --package thor-minimal-client-async-lockfree --test test_minimal_client_async_write_lockfree -- test_thor_minimal_client_async_lockfree_1000_mt --exact --nocapture
 #[test]
 fn test_thor_minimal_client_async_lockfree_1000_mt() {
     let func1 = CString::new("FunctionMT").unwrap();

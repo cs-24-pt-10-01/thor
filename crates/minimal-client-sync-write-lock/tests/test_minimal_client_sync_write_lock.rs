@@ -11,6 +11,7 @@ fn test_thor_minimal_client_sync_1000_st() {
     }
 }
 
+// cargo test --release --package thor-minimal-client-sync --test test_minimal_client_sync_write_lock -- test_thor_minimal_client_sync_1000_mt --exact --nocapture
 #[test]
 fn test_thor_minimal_client_sync_1000_mt() {
     let func1 = CString::new("FunctionMT").unwrap();
