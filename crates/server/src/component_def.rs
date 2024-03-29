@@ -9,7 +9,7 @@ pub trait Measurement<T> {
 }
 
 pub trait Build {
-    fn build(&self, build_script: String) -> bool; // returns whether it succeded
+    fn build(&self, repo: String) -> bool; // returns whether it succeded
 }
 
 pub trait StartProcess {

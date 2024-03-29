@@ -30,6 +30,11 @@ fn main() {
 
     let build = BuilderImplem {};
 
+    // test
+    let yay = build.build(r#"https://github.com/cs-24-pt-10-01/HotspotBenchmarkJS.git"#.to_owned());
+    println!("yay: {}", yay);
+
+    /*
     let mut measure = RaplSampler::new(
         config.thor.max_sample_age_millis as u128,
         config.thor.sampling_interval_micros,
@@ -43,4 +48,5 @@ fn main() {
         remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle_millis,
     };
     listen.start_listening(start, build, &mut measure).unwrap();
+    */
 }
