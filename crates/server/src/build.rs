@@ -1,4 +1,6 @@
 use crate::component_def::Build;
+use std::env;
+use std::fs::remove_dir_all;
 use std::{process::Command, string};
 
 pub struct BuilderImplem {}
@@ -9,17 +11,21 @@ impl Build for BuilderImplem {
         let repo_name = repo_name[0..repo_name.len() - 4].to_string(); // remove .git from end
         let repo_name_clone = repo_name.clone();
 
-        // clone repo using git
+        //saving current directory
+        let current_dir = env::current_dir().unwrap();
+
+        // Clone repo using git
         Command::new("git")
             .arg("clone")
             .arg(repo)
             .output()
             .expect("failed to clone repo");
 
-        //TODO change env directory
+        // Change directory to the repo
+        env::set_current_dir(repo_name_clone.clone()).unwrap();
 
         // run script (run with bash for linux and powershell for windows)
-        println!("starting process");
+        println!("starting process {}...", repo_name);
         if cfg!(target_os = "windows") {
             Command::new("powershell")
                 .arg("./run.ps1")
@@ -33,17 +39,11 @@ impl Build for BuilderImplem {
         };
         println!("process finished");
 
-        Command::new("cd")
-            .arg("..")
-            .output()
-            .expect("failed to move of folder??");
+        // going back to the original directory
+        env::set_current_dir(current_dir).unwrap();
 
-        // clean up
-        Command::new("rm")
-            .arg("-rf")
-            .arg(repo_name_clone)
-            .output()
-            .expect("failed to remove repo");
+        // Removing the cloned repo
+        remove_dir_all(repo_name).unwrap();
 
         true
     }
