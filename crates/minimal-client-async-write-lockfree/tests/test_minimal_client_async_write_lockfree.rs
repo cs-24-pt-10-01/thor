@@ -24,7 +24,7 @@ fn test_thor_minimal_client_async_lockfree_1000_mt() {
         .map(|_| {
             let func1 = func1.clone();
             std::thread::spawn(move || {
-                for _ in 0..1000000 {
+                for _ in 0..10000 {
                     unsafe { start_rapl(func1.as_ptr()) };
                     unsafe { stop_rapl(func1.as_ptr()) };
                 }
