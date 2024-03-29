@@ -1,7 +1,7 @@
 use crate::component_def::Build;
 use std::env;
 use std::fs::remove_dir_all;
-use std::{process::Command, string};
+use std::process::Command;
 
 pub struct BuilderImplem {}
 
@@ -9,7 +9,6 @@ impl Build for BuilderImplem {
     fn build(&self, repo: String) -> bool {
         let repo_name = repo.clone().split("/").last().unwrap().to_string();
         let repo_name = repo_name[0..repo_name.len() - 4].to_string(); // remove .git from end
-        let repo_name_clone = repo_name.clone();
 
         //saving current directory
         let current_dir = env::current_dir().unwrap();
@@ -22,7 +21,7 @@ impl Build for BuilderImplem {
             .expect("failed to clone repo");
 
         // Change directory to the repo
-        env::set_current_dir(repo_name_clone.clone()).unwrap();
+        env::set_current_dir(repo_name.clone()).unwrap();
 
         // run script (run with bash for linux and powershell for windows)
         println!("starting process {}...", repo_name);
