@@ -7,6 +7,7 @@ const Net = require('net');
 const port = 6969;
 const host = "127.0.0.1";
 const end = "end";
+const repo = "https://github.com/cs-24-pt-10-01/HotspotBenchmarkJS.git";
 
 const client = new Net.Socket();
 
@@ -14,6 +15,7 @@ let dataBuffer = Buffer.alloc(0);
 
 client.connect({ port: port, host: host }, function () {
     client.write("1"); // indicating client stream
+    client.write(repo);
     console.log('Connected');
 });
 
@@ -34,6 +36,14 @@ client.on('data', function (data) {
     else {
         dataBuffer = Buffer.concat([dataBuffer, data]);
     }
+});
+
+client.on('error', function (err) {
+    console.log(err);
+});
+
+client.on('end', function () {
+    console.log('Disconnected');
 });
 
 // TODO fix json formatting, "[...],[...]" not allowed

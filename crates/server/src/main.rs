@@ -9,7 +9,7 @@ mod start_process;
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
 // implementations of components
-use crate::build::BuilderImplem;
+use crate::build::GitBuild;
 use crate::listener::ListenerImplem;
 use crate::measurement::RaplSampler;
 use crate::start_process::StartImplem;
@@ -28,13 +28,10 @@ fn main() {
 
     let start = StartImplem {};
 
-    let build = BuilderImplem {};
+    let build = GitBuild {};
 
     // test
-    let yay = build.build(r#"https://github.com/cs-24-pt-10-01/HotspotBenchmarkJS.git"#.to_owned());
-    println!("yay: {}", yay);
 
-    /*
     let mut measure = RaplSampler::new(
         config.thor.max_sample_age_millis as u128,
         config.thor.sampling_interval_micros,
@@ -48,5 +45,4 @@ fn main() {
         remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle_millis,
     };
     listen.start_listening(start, build, &mut measure).unwrap();
-    */
 }

@@ -3,9 +3,9 @@ use std::env;
 use std::fs::remove_dir_all;
 use std::process::Command;
 
-pub struct BuilderImplem {}
+pub struct GitBuild {}
 
-impl Build for BuilderImplem {
+impl Build for GitBuild {
     fn build(&self, repo: String) -> bool {
         let repo_name = repo.clone().split("/").last().unwrap().to_string();
         let repo_name = repo_name[0..repo_name.len() - 4].to_string(); // remove .git from end

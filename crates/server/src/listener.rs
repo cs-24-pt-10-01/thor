@@ -1,3 +1,4 @@
+use crate::build::GitBuild;
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
 use serde_json;
@@ -67,7 +68,7 @@ async fn listen(server_ip: String, remote_tcpstreams: Arc<Mutex<Vec<std::net::Tc
         if connection_type == ConnectionType::Local as u8 {
             handle_local_connection(socket);
         } else {
-            handle_remote_connection(remote_tcpstreams.clone(), socket);
+            handle_remote_connection(remote_tcpstreams.clone(), socket).await;
         }
     }
 }
@@ -105,14 +106,43 @@ fn handle_local_connection(mut socket: tokio::net::TcpStream) {
     });
 }
 
-fn handle_remote_connection(
+async fn handle_remote_connection(
     remote_tcpstreams: Arc<Mutex<Vec<std::net::TcpStream>>>,
-    socket: tokio::net::TcpStream,
+    mut socket: tokio::net::TcpStream,
 ) {
+    // Getting repo from client
+    let mut buf = Vec::new();
+    socket.read_buf(&mut buf).await.unwrap(); // url is expected to be within on packet
+
+    let repo = String::from_utf8(buf.to_vec())
+        .unwrap()
+        .trim_matches(char::from(0))
+        .to_string();
+
     remote_tcpstreams
         .lock()
         .unwrap()
         .push(socket.into_std().unwrap());
+
+    if repo == "none" {
+        println!("No repo provided");
+        return;
+    }
+
+    thread::spawn(move || {
+        // build and start process
+        GitBuild {}.build(repo);
+
+        // waiting for measurements to be sent
+        while (!LOCAL_CLIENT_PACKET_QUEUE.is_empty()) {
+            thread::sleep(Duration::from_secs(1));
+        }
+
+        // Disconnecting client
+        // TODO this can break with multiple clients are connected.
+        let s = remote_tcpstreams.lock().unwrap().pop();
+        s.unwrap().shutdown(std::net::Shutdown::Both).unwrap();
+    });
 }
 
 fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
