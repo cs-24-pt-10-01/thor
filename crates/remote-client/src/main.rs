@@ -36,6 +36,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .await
         .unwrap();
 
+    // signifying no repo
+    stream.write_all(b"none").await.unwrap();
+
     let file = OpenOptions::new()
         .append(true)
         .create(true)
