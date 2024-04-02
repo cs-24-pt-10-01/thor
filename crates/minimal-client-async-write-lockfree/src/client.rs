@@ -60,8 +60,8 @@ fn background_writer() {
 
     let mut data = VecDeque::new();
     loop {
-        while let Some(ayo) = QUEUE.pop() {
-            data.push_back(ayo);
+        while let Some(measurement) = QUEUE.pop() {
+            data.push_back(measurement);
         }
 
         while let Some((id, rapl_registers, timestamp)) = data.pop_front() {
