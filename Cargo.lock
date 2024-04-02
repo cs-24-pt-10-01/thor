@@ -535,6 +535,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "thor-lib-sync"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "serde",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
 name = "thor-local-client"
 version = "0.1.0"
 dependencies = [
