@@ -50,16 +50,16 @@ pub enum RaplMeasurement {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct IntelRaplRegistersJoules {
-    pp0: f64,
-    pp1: f64,
-    pkg: f64,
-    dram: f64,
+    pub pp0: f64,
+    pub pp1: f64,
+    pub pkg: f64,
+    pub dram: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct AmdRaplRegistersJoules {
-    core: f64,
-    pkg: f64,
+    pub core: f64,
+    pub pkg: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
