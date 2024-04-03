@@ -535,12 +535,75 @@ dependencies = [
 ]
 
 [[package]]
+name = "thor-lib-sync"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "serde",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
 name = "thor-local-client"
 version = "0.1.0"
 dependencies = [
  "bincode",
  "crossbeam",
  "serde",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
+name = "thor-minimal-client-async-lock"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "csv",
+ "serde",
+ "thor-lib",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
+name = "thor-minimal-client-async-lockfree"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "csv",
+ "serde",
+ "thor-lib",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
+name = "thor-minimal-client-empty"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "csv",
+ "serde",
+ "thor-lib",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
+name = "thor-minimal-client-sync"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "csv",
+ "serde",
+ "thor-lib",
  "thor-shared",
  "thread-id",
 ]
