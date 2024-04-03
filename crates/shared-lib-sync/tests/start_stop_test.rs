@@ -10,7 +10,4 @@ fn test_send_function() {
     let func2 = CString::new("Function2").unwrap();
     unsafe { start_rapl(func2.as_ptr()) };
     unsafe { stop_rapl(func2.as_ptr()) };
-
-    // Sleep for 5 seconds
-    std::thread::sleep(std::time::Duration::from_secs(5));
 }
