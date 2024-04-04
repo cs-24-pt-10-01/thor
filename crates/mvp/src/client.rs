@@ -7,16 +7,6 @@ use std::{
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
-// Context:
-// This is an example of rapl-interface that is intended to be used in an application that can have mulitple threads calling to start_rapl and stop_rapl.
-// The design of rapl-interface is insufficient due to its lack of thread safety. The CSV_WRITER is a static variable that is shared between threads and is not protected by a lock.
-// This design is changed to perform thread safe operations by using a lock to protect the CSV_WRITER.
-
-// Need extra examples: (pass to queue (MPMC design), then write to file)
-// minimal-client-async-write-lock (try with a VecDeque that uses a lock)
-// minimal-client-async-write-lockfree (use a lockfree data structure such as a queue)
-
-// TODO: Need to lock here because there can be multiple threads trying to access the same writer
 static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
 
 pub fn start_rapl(id: impl AsRef<str>) {
