@@ -187,10 +187,10 @@ pub fn convert_rapl_msr_register_to_joules(
 
     match (prev_measurement, curr_measurement) {
         (RaplMeasurement::Intel(prev), RaplMeasurement::Intel(curr)) => {
-            let pp0 = (curr.pp0 as f64 * energy_unit) - (prev.pp0 as f64);
-            let pp1 = (curr.pp1 as f64 * energy_unit) - (prev.pp1 as f64);
-            let pkg = (curr.pkg as f64 * energy_unit) - (prev.pkg as f64);
-            let dram = (curr.dram as f64 * energy_unit) - (prev.dram as f64);
+            let pp0 = (curr.pp0 - prev.pp0) as f64 * energy_unit;
+            let pp1 = (curr.pp1 - prev.pp1) as f64 * energy_unit;
+            let pkg = (curr.pkg - prev.pkg) as f64 * energy_unit;
+            let dram = (curr.dram - prev.dram) as f64 * energy_unit;
 
             RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
                 pp0,
@@ -200,8 +200,8 @@ pub fn convert_rapl_msr_register_to_joules(
             })
         }
         (RaplMeasurement::AMD(prev), RaplMeasurement::AMD(curr)) => {
-            let core = (curr.core as f64 * energy_unit) - (prev.core as f64 * energy_unit);
-            let pkg = (curr.pkg as f64 * energy_unit) - (prev.pkg as f64 * energy_unit);
+            let core = (curr.core - prev.core) as f64 * energy_unit;
+            let pkg = (curr.pkg - prev.pkg) as f64 * energy_unit;
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
         }
