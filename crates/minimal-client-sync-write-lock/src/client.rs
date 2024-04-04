@@ -53,12 +53,12 @@ pub fn start_rapl(id: impl AsRef<str>) {
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
-    let rapl_registers = read_rapl_msr_registers();
+    let rapl_registers = read_rapl_msr_registers_as_joules(None);
 
     let timestamp = get_timestamp_millis();
 
     match rapl_registers {
-        RaplMeasurement::Intel(intel) => {
+        RaplMeasurementJoules::Intel(intel) => {
             write_to_csv(
                 (
                     id.as_ref(),
@@ -72,7 +72,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             )
             .unwrap();
         }
-        RaplMeasurement::AMD(amd) => {
+        RaplMeasurementJoules::AMD(amd) => {
             write_to_csv(
                 (id.as_ref(), timestamp, amd.core, amd.pkg),
                 ["id", "timestamp", "core", "pkg"],
