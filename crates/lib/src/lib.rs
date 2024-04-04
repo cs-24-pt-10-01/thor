@@ -189,7 +189,13 @@ pub fn convert_rapl_msr_register_to_joules(
         (RaplMeasurement::Intel(prev), RaplMeasurement::Intel(curr)) => {
             let pp0 = (curr.pp0 - prev.pp0) as f64 * energy_unit;
             let pp1 = (curr.pp1 - prev.pp1) as f64 * energy_unit;
-            let pkg = (curr.pkg - prev.pkg) as f64 * energy_unit;
+            let pkg = if let Some(pkg) = curr.pkg.checked_sub(prev.pkg) {
+                pkg as f64 * energy_unit
+            } else {
+                // TOOD: Handle overflow once the value has been found
+                panic!("Overflow, prev pkg: {}, curr pkg {}", prev.pkg, curr.pkg);
+                //(u32::MAX - prev.pkg + curr.pkg + 1) as f64 * energy_unit
+            };
             let dram = (curr.dram - prev.dram) as f64 * energy_unit;
 
             RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
@@ -201,7 +207,13 @@ pub fn convert_rapl_msr_register_to_joules(
         }
         (RaplMeasurement::AMD(prev), RaplMeasurement::AMD(curr)) => {
             let core = (curr.core.wrapping_sub(prev.core)) as f64 * energy_unit;
-            let pkg = (curr.pkg - prev.pkg) as f64 * energy_unit;
+            let pkg = if let Some(pkg) = curr.pkg.checked_sub(prev.pkg) {
+                pkg as f64 * energy_unit
+            } else {
+                // TOOD: Handle overflow once the value has been found
+                panic!("Overflow, prev pkg: {}, curr pkg {}", prev.pkg, curr.pkg);
+                //(u32::MAX - prev.pkg + curr.pkg + 1) as f64 * energy_unit
+            };
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
         }
