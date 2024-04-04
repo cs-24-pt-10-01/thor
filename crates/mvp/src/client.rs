@@ -1,15 +1,24 @@
 use csv::{Writer, WriterBuilder};
 use serde::Serialize;
 use std::{
+    collections::HashMap,
     fs::{File, OpenOptions},
-    sync::Mutex,
+    sync::{Mutex, Once},
     time::{SystemTime, UNIX_EPOCH},
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
+static RAPLMEASUREMENTS_HASHMAP: Mutex<Option<HashMap<String, RaplMeasurement>>> = Mutex::new(None);
 static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
 
+static RAPL_INIT: Once = Once::new();
+
 pub fn start_rapl(id: impl AsRef<str>) {
+    RAPL_INIT.call_once(|| {
+        // Initialize the RAPL hashmap
+        *RAPLMEASUREMENTS_HASHMAP.lock().unwrap() = Some(HashMap::new());
+    });
+
     let rapl_registers = read_rapl_msr_registers();
 
     let timestamp = get_timestamp_millis();
