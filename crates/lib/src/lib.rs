@@ -200,7 +200,7 @@ pub fn convert_rapl_msr_register_to_joules(
             })
         }
         (RaplMeasurement::AMD(prev), RaplMeasurement::AMD(curr)) => {
-            let core = (curr.core - prev.core) as f64 * energy_unit;
+            let core = (curr.core.wrapping_sub(prev.core)) as f64 * energy_unit;
             let pkg = (curr.pkg - prev.pkg) as f64 * energy_unit;
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
