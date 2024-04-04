@@ -1,8 +1,8 @@
 use std::ffi::CString;
-use thor_minimal_client_sync::ffi::{start_rapl, stop_rapl};
+use thor_mvp::ffi::{start_rapl, stop_rapl};
 
 #[test]
-fn test_thor_minimal_client_sync_1000_st() {
+fn test_mvp_1000_st() {
     let func1 = CString::new("FunctionST").unwrap();
 
     for _ in 0..1000 {
@@ -11,7 +11,7 @@ fn test_thor_minimal_client_sync_1000_st() {
     }
 }
 
-// cargo test --release --package thor-minimal-client-sync --test test_minimal_client_sync_write_lock -- test_thor_minimal_client_sync_1000_mt --exact --nocapture
+// cargo test --release --package thor-minimal-client-sync --test test_mvp -- test_mvp_1000_mt --exact --nocapture
 #[test]
 fn test_thor_minimal_client_sync_1000_mt() {
     let func1 = CString::new("FunctionMT").unwrap();
