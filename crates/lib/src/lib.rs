@@ -177,7 +177,7 @@ pub fn convert_rapl_msr_register_to_joules(
     measurement2: RaplMeasurement,
 ) -> RaplMeasurementJoules {
     // Get the power unit
-    let power_unit = read_rapl_msr_power_unit();
+    let power_unit = *RAPL_POWER_UNITS.get_or_init(|| read_rapl_msr_power_unit());
 
     // Shift the power unit by 8 bits and then AND it with 0x1f
     let joule_unit = (power_unit >> 8) & 0x1f;
@@ -200,8 +200,8 @@ pub fn convert_rapl_msr_register_to_joules(
             })
         }
         (RaplMeasurement::AMD(registers1), RaplMeasurement::AMD(registers2)) => {
-            let core = registers2.core as f64 * energy_unit - registers1.core as f64;
-            let pkg = registers2.pkg as f64 * energy_unit - registers1.pkg as f64;
+            let core = (registers2.core as f64 * energy_unit) - (registers1.core as f64);
+            let pkg = (registers2.pkg as f64 * energy_unit) - (registers1.pkg as f64);
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
         }
