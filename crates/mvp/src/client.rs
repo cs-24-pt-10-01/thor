@@ -20,9 +20,9 @@ pub fn start_rapl(id: impl AsRef<str>) {
         *RAPLMEASUREMENTS_HASHMAP.lock().unwrap() = Some(HashMap::new());
     });
 
-    let rapl_registers = read_rapl_msr_registers();
-
     let timestamp = get_timestamp_millis();
+
+    let rapl_registers = read_rapl_msr_registers();
 
     // Insert the RAPL registers into the hashmap
     RAPLMEASUREMENTS_HASHMAP
