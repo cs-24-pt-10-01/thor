@@ -6,7 +6,7 @@ use std::{
     sync::{Mutex, Once},
     time::{SystemTime, UNIX_EPOCH},
 };
-use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
+use thor_lib::{convert_rapl_msr_register_to_joules, read_rapl_msr_registers, RaplMeasurement};
 
 static RAPLMEASUREMENTS_HASHMAP: Mutex<Option<HashMap<(String, usize), (RaplMeasurement, u128)>>> =
     Mutex::new(None);
@@ -50,62 +50,47 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         .remove(&(id.as_ref().to_string(), thread_id::get()))
         .expect("Failed to remove RAPL registers from hashmap");
 
-    match (start_rapl_registers, stop_rapl_registers) {
-        (RaplMeasurement::Intel(start_intel), RaplMeasurement::Intel(stop_intel)) => {
+    let rapl_measurement_joules =
+        convert_rapl_msr_register_to_joules(start_rapl_registers, stop_rapl_registers);
+
+    // Write the RAPL registers to the CSV
+    match rapl_measurement_joules {
+        thor_lib::RaplMeasurementJoules::Intel(intel) => {
             write_to_csv(
                 (
                     id.as_ref(),
                     start_timestamp,
                     stop_timestamp,
-                    start_intel.pp0,
-                    stop_intel.pp0,
-                    start_intel.pp1,
-                    stop_intel.pp1,
-                    start_intel.pkg,
-                    stop_intel.pkg,
-                    start_intel.dram,
-                    stop_intel.dram,
+                    intel.pp0,
+                    intel.pp1,
+                    intel.pkg,
+                    intel.dram,
                 ),
                 [
                     "id",
                     "start_timestamp",
                     "stop_timestamp",
-                    "start_pp0",
-                    "stop_pp0",
-                    "start_pp1",
-                    "stop_pp1",
-                    "start_pkg",
-                    "stop_pkg",
-                    "start_dram",
-                    "stop_dram",
+                    "pp0",
+                    "pp1",
+                    "pkg",
+                    "dram",
                 ],
             )
             .unwrap();
         }
-        (RaplMeasurement::AMD(start_amd), RaplMeasurement::AMD(stop_amd)) => {
+        thor_lib::RaplMeasurementJoules::AMD(amd) => {
             write_to_csv(
                 (
                     id.as_ref(),
                     start_timestamp,
                     stop_timestamp,
-                    start_amd.core,
-                    stop_amd.core,
-                    start_amd.pkg,
-                    stop_amd.pkg,
+                    amd.core,
+                    amd.pkg,
                 ),
-                [
-                    "id",
-                    "start_timestamp",
-                    "stop_timestamp",
-                    "start_core",
-                    "stop_core",
-                    "start_pkg",
-                    "stop_pkg",
-                ],
+                ["id", "start_timestamp", "stop_timestamp", "core", "pkg"],
             )
             .unwrap();
         }
-        _ => panic!("RaplMeasurement types do not match"),
     }
 }
 
