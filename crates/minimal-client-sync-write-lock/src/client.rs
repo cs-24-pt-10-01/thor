@@ -5,7 +5,7 @@ use std::{
     sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
 };
-use thor_lib::{read_rapl_msr_registers_as_joules, RaplMeasurementJoules};
+use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
 // Context:
 // This is an example of rapl-interface that is intended to be used in an application that can have mulitple threads calling to start_rapl and stop_rapl.
@@ -22,10 +22,10 @@ static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
 pub fn start_rapl(id: impl AsRef<str>) {
     let timestamp = get_timestamp_millis();
 
-    let rapl_registers = read_rapl_msr_registers_as_joules(None);
+    let rapl_registers = read_rapl_msr_registers();
 
     match rapl_registers {
-        RaplMeasurementJoules::Intel(intel) => {
+        RaplMeasurement::Intel(intel) => {
             write_to_csv(
                 (
                     id.as_ref(),
@@ -39,7 +39,7 @@ pub fn start_rapl(id: impl AsRef<str>) {
             )
             .unwrap();
         }
-        RaplMeasurementJoules::AMD(amd) => {
+        RaplMeasurement::AMD(amd) => {
             write_to_csv(
                 (id.as_ref(), timestamp, amd.core, amd.pkg),
                 ["id", "timestamp", "core", "pkg"],
@@ -50,12 +50,12 @@ pub fn start_rapl(id: impl AsRef<str>) {
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
-    let rapl_registers = read_rapl_msr_registers_as_joules(None);
+    let rapl_registers = read_rapl_msr_registers();
 
     let timestamp = get_timestamp_millis();
 
     match rapl_registers {
-        RaplMeasurementJoules::Intel(intel) => {
+        RaplMeasurement::Intel(intel) => {
             write_to_csv(
                 (
                     id.as_ref(),
@@ -69,7 +69,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             )
             .unwrap();
         }
-        RaplMeasurementJoules::AMD(amd) => {
+        RaplMeasurement::AMD(amd) => {
             write_to_csv(
                 (id.as_ref(), timestamp, amd.core, amd.pkg),
                 ["id", "timestamp", "core", "pkg"],
