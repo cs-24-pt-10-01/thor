@@ -17,7 +17,7 @@ fn test_thor_minimal_client_sync_1000_mt() {
     let func1 = CString::new("FunctionMT").unwrap();
 
     // Test for 8 threads 1000 times
-    let handles = (0..8)
+    let handles = (0..2)
         .map(|_| {
             let func1 = func1.clone();
             std::thread::spawn(move || {

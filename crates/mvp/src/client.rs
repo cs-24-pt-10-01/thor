@@ -24,7 +24,6 @@ pub fn start_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
-    // get thread id
     // Insert the RAPL registers into the hashmap
     RAPLMEASUREMENTS_HASHMAP
         .lock()
