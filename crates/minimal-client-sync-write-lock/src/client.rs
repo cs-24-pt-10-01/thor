@@ -5,10 +5,7 @@ use std::{
     sync::Mutex,
     time::{SystemTime, UNIX_EPOCH},
 };
-use thor_lib::{
-    read_rapl_msr_registers, read_rapl_msr_registers_as_joules, RaplMeasurement,
-    RaplMeasurementJoules,
-};
+use thor_lib::{read_rapl_msr_registers_as_joules, RaplMeasurementJoules};
 
 // Context:
 // This is an example of rapl-interface that is intended to be used in an application that can have mulitple threads calling to start_rapl and stop_rapl.
