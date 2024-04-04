@@ -609,6 +609,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "thor-mvp"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "csv",
+ "serde",
+ "thor-lib",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
 name = "thor-server"
 version = "0.1.0"
 dependencies = [
