@@ -173,8 +173,8 @@ pub fn read_rapl_msr_registers_as_joules(
 }
 
 pub fn convert_rapl_msr_register_to_joules(
-    measurement1: RaplMeasurement,
-    measurement2: RaplMeasurement,
+    prev_measurement: RaplMeasurement,
+    curr_measurement: RaplMeasurement,
 ) -> RaplMeasurementJoules {
     // Get the power unit
     let power_unit = *RAPL_POWER_UNITS.get_or_init(|| read_rapl_msr_power_unit());
@@ -185,12 +185,12 @@ pub fn convert_rapl_msr_register_to_joules(
     // do mod pow 0.5 ^ joule_unit
     let energy_unit = 0.5f64.powi(joule_unit as i32);
 
-    match (measurement1, measurement2) {
-        (RaplMeasurement::Intel(registers1), RaplMeasurement::Intel(registers2)) => {
-            let pp0 = registers2.pp0 as f64 * energy_unit - registers1.pp0 as f64;
-            let pp1 = registers2.pp1 as f64 * energy_unit - registers1.pp1 as f64;
-            let pkg = registers2.pkg as f64 * energy_unit - registers1.pkg as f64;
-            let dram = registers2.dram as f64 * energy_unit - registers1.dram as f64;
+    match (prev_measurement, curr_measurement) {
+        (RaplMeasurement::Intel(prev), RaplMeasurement::Intel(curr)) => {
+            let pp0 = (curr.pp0 as f64 * energy_unit) - (prev.pp0 as f64);
+            let pp1 = (curr.pp1 as f64 * energy_unit) - (prev.pp1 as f64);
+            let pkg = (curr.pkg as f64 * energy_unit) - (prev.pkg as f64);
+            let dram = (curr.dram as f64 * energy_unit) - (prev.dram as f64);
 
             RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
                 pp0,
@@ -199,9 +199,9 @@ pub fn convert_rapl_msr_register_to_joules(
                 dram,
             })
         }
-        (RaplMeasurement::AMD(registers1), RaplMeasurement::AMD(registers2)) => {
-            let core = (registers2.core as f64 * energy_unit) - (registers1.core as f64);
-            let pkg = (registers2.pkg as f64 * energy_unit) - (registers1.pkg as f64);
+        (RaplMeasurement::AMD(prev), RaplMeasurement::AMD(curr)) => {
+            let core = (curr.core as f64 * energy_unit) - (prev.core as f64 * energy_unit);
+            let pkg = (curr.pkg as f64 * energy_unit) - (prev.pkg as f64 * energy_unit);
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
         }
