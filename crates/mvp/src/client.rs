@@ -8,7 +8,8 @@ use std::{
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
-static RAPLMEASUREMENTS_HASHMAP: Mutex<Option<HashMap<String, RaplMeasurement>>> = Mutex::new(None);
+static RAPLMEASUREMENTS_HASHMAP: Mutex<Option<HashMap<String, (RaplMeasurement, u128)>>> =
+    Mutex::new(None);
 static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
 
 static RAPL_INIT: Once = Once::new();
@@ -23,6 +24,15 @@ pub fn start_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
+    // Insert the RAPL registers into the hashmap
+    RAPLMEASUREMENTS_HASHMAP
+        .lock()
+        .expect("Failed to lock RAPL hashmap")
+        .as_mut()
+        .expect("RAPL hashmap is None")
+        .insert(id.as_ref().to_string(), (rapl_registers, timestamp));
+
+    /*
     match rapl_registers {
         RaplMeasurement::Intel(intel) => {
             write_to_csv(
@@ -46,13 +56,64 @@ pub fn start_rapl(id: impl AsRef<str>) {
             .unwrap();
         }
     }
+    */
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
-    let rapl_registers = read_rapl_msr_registers();
+    let stop_rapl_registers = read_rapl_msr_registers();
 
-    let timestamp = get_timestamp_millis();
+    let stop_timestamp = get_timestamp_millis();
 
+    // Get the RAPL registers from the hashmap
+    let (start_rapl_registers, start_timestamp) = RAPLMEASUREMENTS_HASHMAP
+        .lock()
+        .expect("Failed to lock RAPL hashmap")
+        .as_mut()
+        .expect("RAPL hashmap is None")
+        .remove(id.as_ref())
+        .expect("Failed to remove RAPL registers from hashmap");
+
+    match (start_rapl_registers, stop_rapl_registers) {
+        (RaplMeasurement::Intel(start_intel), RaplMeasurement::Intel(stop_intel)) => {
+            write_to_csv(
+                (
+                    id.as_ref(),
+                    start_timestamp,
+                    stop_timestamp,
+                    stop_intel.pp0 - start_intel.pp0,
+                    stop_intel.pp1 - start_intel.pp1,
+                    stop_intel.pkg - start_intel.pkg,
+                    stop_intel.dram - start_intel.dram,
+                ),
+                [
+                    "id",
+                    "start_timestamp",
+                    "stop_timestamp",
+                    "pp0",
+                    "pp1",
+                    "pkg",
+                    "dram",
+                ],
+            )
+            .unwrap();
+        }
+        (RaplMeasurement::AMD(start_amd), RaplMeasurement::AMD(stop_amd)) => {
+            write_to_csv(
+                (
+                    id.as_ref(),
+                    start_timestamp,
+                    stop_timestamp,
+                    stop_amd.core - start_amd.core,
+                    stop_amd.pkg - start_amd.pkg,
+                ),
+                ["id", "start_timestamp", "stop_timestamp", "core", "pkg"],
+            )
+            .unwrap();
+        }
+        _ => panic!("RaplMeasurement types do not match"),
+    }
+
+    /*
     match rapl_registers {
         RaplMeasurement::Intel(intel) => {
             write_to_csv(
@@ -76,6 +137,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             .unwrap();
         }
     }
+    */
 }
 
 fn write_to_csv<T, C, U>(data: T, columns: C) -> Result<(), std::io::Error>
