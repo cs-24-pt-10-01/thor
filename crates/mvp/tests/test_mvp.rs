@@ -11,7 +11,7 @@ fn test_mvp_1000_st() {
     }
 }
 
-// cargo test --release --package thor-minimal-client-sync --test test_mvp -- test_mvp_1000_mt --exact --nocapture
+// cargo test --release --package thor-mvp --test test_mvp -- test_mvp_1000_mt --exact --nocapture
 #[test]
 fn test_mvp_1000_mt() {
     let func1 = CString::new("FunctionMT").unwrap();
