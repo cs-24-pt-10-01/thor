@@ -25,8 +25,6 @@ pub fn start_rapl(id: impl AsRef<str>) {
     let timestamp = get_timestamp_millis();
 
     // get thread id
-    let thread_id = thread_id::get();
-
     // Insert the RAPL registers into the hashmap
     RAPLMEASUREMENTS_HASHMAP
         .lock()
@@ -34,7 +32,7 @@ pub fn start_rapl(id: impl AsRef<str>) {
         .as_mut()
         .expect("RAPL hashmap is None")
         .insert(
-            (id.as_ref().to_string(), thread_id),
+            (id.as_ref().to_string(), thread_id::get()),
             (rapl_registers, timestamp),
         );
 

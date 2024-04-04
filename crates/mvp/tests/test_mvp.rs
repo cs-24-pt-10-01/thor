@@ -21,7 +21,6 @@ fn test_thor_minimal_client_sync_1000_mt() {
         .map(|_| {
             let func1 = func1.clone();
             std::thread::spawn(move || {
-                println!("Thread id is: {}", thread_id::get());
                 for _ in 0..1000 {
                     unsafe { start_rapl(func1.as_ptr()) };
                     unsafe { stop_rapl(func1.as_ptr()) };
