@@ -1,6 +1,7 @@
 use std::ffi::CString;
 use thor_mvp::ffi::{start_rapl, stop_rapl};
 
+// cargo test --release --package thor-mvp --test test_mvp -- test_mvp_1000_st --exact --nocapture
 #[test]
 fn test_mvp_1000_st() {
     let func1 = CString::new("FunctionST").unwrap();
