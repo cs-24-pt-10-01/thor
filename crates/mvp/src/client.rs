@@ -34,32 +34,6 @@ pub fn start_rapl(id: impl AsRef<str>) {
             (id.as_ref().to_string(), thread_id::get()),
             (rapl_registers, timestamp),
         );
-
-    /*
-    match rapl_registers {
-        RaplMeasurement::Intel(intel) => {
-            write_to_csv(
-                (
-                    id.as_ref(),
-                    timestamp,
-                    intel.pp0,
-                    intel.pp1,
-                    intel.pkg,
-                    intel.dram,
-                ),
-                ["id", "timestamp", "pp0", "pp1", "pkg", "dram"],
-            )
-            .unwrap();
-        }
-        RaplMeasurement::AMD(amd) => {
-            write_to_csv(
-                (id.as_ref(), timestamp, amd.core, amd.pkg),
-                ["id", "timestamp", "core", "pkg"],
-            )
-            .unwrap();
-        }
-    }
-    */
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
@@ -133,32 +107,6 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         }
         _ => panic!("RaplMeasurement types do not match"),
     }
-
-    /*
-    match rapl_registers {
-        RaplMeasurement::Intel(intel) => {
-            write_to_csv(
-                (
-                    id.as_ref(),
-                    timestamp,
-                    intel.pp0,
-                    intel.pp1,
-                    intel.pkg,
-                    intel.dram,
-                ),
-                ["id", "timestamp", "pp0", "pp1", "pkg", "dram"],
-            )
-            .unwrap();
-        }
-        RaplMeasurement::AMD(amd) => {
-            write_to_csv(
-                (id.as_ref(), timestamp, amd.core, amd.pkg),
-                ["id", "timestamp", "core", "pkg"],
-            )
-            .unwrap();
-        }
-    }
-    */
 }
 
 fn write_to_csv<T, C, U>(data: T, columns: C) -> Result<(), std::io::Error>
