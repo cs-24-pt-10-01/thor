@@ -172,6 +172,43 @@ pub fn read_rapl_msr_registers_as_joules(
     }
 }
 
+pub fn convert_rapl_msr_register_to_joules(
+    measurement1: RaplMeasurement,
+    measurement2: RaplMeasurement,
+) -> RaplMeasurementJoules {
+    // Get the power unit
+    let power_unit = read_rapl_msr_power_unit();
+
+    // Shift the power unit by 8 bits and then AND it with 0x1f
+    let joule_unit = (power_unit >> 8) & 0x1f;
+
+    // do mod pow 0.5 ^ joule_unit
+    let energy_unit = 0.5f64.powi(joule_unit as i32);
+
+    match (measurement1, measurement2) {
+        (RaplMeasurement::Intel(registers1), RaplMeasurement::Intel(registers2)) => {
+            let pp0 = registers2.pp0 as f64 * energy_unit - registers1.pp0 as f64;
+            let pp1 = registers2.pp1 as f64 * energy_unit - registers1.pp1 as f64;
+            let pkg = registers2.pkg as f64 * energy_unit - registers1.pkg as f64;
+            let dram = registers2.dram as f64 * energy_unit - registers1.dram as f64;
+
+            RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
+                pp0,
+                pp1,
+                pkg,
+                dram,
+            })
+        }
+        (RaplMeasurement::AMD(registers1), RaplMeasurement::AMD(registers2)) => {
+            let core = registers2.core as f64 * energy_unit - registers1.core as f64;
+            let pkg = registers2.pkg as f64 * energy_unit - registers1.pkg as f64;
+
+            RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
+        }
+        _ => panic!("Previous and current RAPL measurements do not match"),
+    }
+}
+
 /// Read the RAPL MSR power unit register. This is a separate function because it is only needed once.
 pub fn read_rapl_msr_power_unit() -> u64 {
     RAPL_INIT.call_once(|| {
