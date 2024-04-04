@@ -20,9 +20,9 @@ use thor_lib::{read_rapl_msr_registers_as_joules, RaplMeasurementJoules};
 static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
 
 pub fn start_rapl(id: impl AsRef<str>) {
-    let rapl_registers = read_rapl_msr_registers_as_joules(None);
-
     let timestamp = get_timestamp_millis();
+
+    let rapl_registers = read_rapl_msr_registers_as_joules(None);
 
     match rapl_registers {
         RaplMeasurementJoules::Intel(intel) => {
