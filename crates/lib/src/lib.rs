@@ -123,28 +123,51 @@ pub fn read_rapl_msr_registers_as_joules(
     // do mod pow 0.5 ^ joule_unit
     let energy_unit = 0.5f64.powi(joule_unit as i32);
 
-    // TODO: Overflow check, cba rn
-    if let Some(prev_rapl_measurement) = prev_rapl_measurement {}
+    // Check if there is a previous measurement
+    if let Some(prev_rapl_measurement) = prev_rapl_measurement {
+        match (prev_rapl_measurement, rapl_registers) {
+            (RaplMeasurementJoules::Intel(prev_intel), RaplMeasurement::Intel(curr_intel)) => {
+                let pp0 = curr_intel.pp0 as f64 * energy_unit - prev_intel.pp0;
+                let pp1 = curr_intel.pp1 as f64 * energy_unit - prev_intel.pp1;
+                let pkg = curr_intel.pkg as f64 * energy_unit - prev_intel.pkg;
+                let dram = curr_intel.dram as f64 * energy_unit - prev_intel.dram;
 
-    match rapl_registers {
-        RaplMeasurement::Intel(registers) => {
-            let pp0 = registers.pp0 as f64 * energy_unit;
-            let pp1 = registers.pp1 as f64 * energy_unit;
-            let pkg = registers.pkg as f64 * energy_unit;
-            let dram = registers.dram as f64 * energy_unit;
+                RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
+                    pp0,
+                    pp1,
+                    pkg,
+                    dram,
+                })
+            }
+            (RaplMeasurementJoules::AMD(prev_amd), RaplMeasurement::AMD(curr_amd)) => {
+                let core = curr_amd.core as f64 * energy_unit - prev_amd.core;
+                let pkg = curr_amd.pkg as f64 * energy_unit - prev_amd.pkg;
 
-            RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
-                pp0,
-                pp1,
-                pkg,
-                dram,
-            })
+                RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
+            }
+            _ => panic!("Previous and current RAPL measurements do not match"),
         }
-        RaplMeasurement::AMD(registers) => {
-            let core = registers.core as f64 * energy_unit;
-            let pkg = registers.pkg as f64 * energy_unit;
+    } else {
+        match rapl_registers {
+            RaplMeasurement::Intel(registers) => {
+                let pp0 = registers.pp0 as f64 * energy_unit;
+                let pp1 = registers.pp1 as f64 * energy_unit;
+                let pkg = registers.pkg as f64 * energy_unit;
+                let dram = registers.dram as f64 * energy_unit;
 
-            RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
+                RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
+                    pp0,
+                    pp1,
+                    pkg,
+                    dram,
+                })
+            }
+            RaplMeasurement::AMD(registers) => {
+                let core = registers.core as f64 * energy_unit;
+                let pkg = registers.pkg as f64 * energy_unit;
+
+                RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
+            }
         }
     }
 }
