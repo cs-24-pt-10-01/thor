@@ -8,7 +8,7 @@ use std::{
 };
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
 
-static RAPLMEASUREMENTS_HASHMAP: Mutex<Option<HashMap<String, (RaplMeasurement, u128)>>> =
+static RAPLMEASUREMENTS_HASHMAP: Mutex<Option<HashMap<(String, usize), (RaplMeasurement, u128)>>> =
     Mutex::new(None);
 static CSV_WRITER: Mutex<Option<Writer<File>>> = Mutex::new(None);
 
@@ -24,13 +24,19 @@ pub fn start_rapl(id: impl AsRef<str>) {
 
     let timestamp = get_timestamp_millis();
 
+    // get thread id
+    let thread_id = thread_id::get();
+
     // Insert the RAPL registers into the hashmap
     RAPLMEASUREMENTS_HASHMAP
         .lock()
         .expect("Failed to lock RAPL hashmap")
         .as_mut()
         .expect("RAPL hashmap is None")
-        .insert(id.as_ref().to_string(), (rapl_registers, timestamp));
+        .insert(
+            (id.as_ref().to_string(), thread_id),
+            (rapl_registers, timestamp),
+        );
 
     /*
     match rapl_registers {
@@ -70,7 +76,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         .expect("Failed to lock RAPL hashmap")
         .as_mut()
         .expect("RAPL hashmap is None")
-        .remove(id.as_ref())
+        .remove(&(id.as_ref().to_string(), thread_id::get()))
         .expect("Failed to remove RAPL registers from hashmap");
 
     match (start_rapl_registers, stop_rapl_registers) {
