@@ -106,10 +106,20 @@ pub fn stop_rapl(id: impl AsRef<str>) {
                     id.as_ref(),
                     start_timestamp,
                     stop_timestamp,
-                    stop_amd.core - start_amd.core,
-                    stop_amd.pkg - start_amd.pkg,
+                    start_amd.core,
+                    stop_amd.core,
+                    start_amd.pkg,
+                    stop_amd.pkg,
                 ),
-                ["id", "start_timestamp", "stop_timestamp", "core", "pkg"],
+                [
+                    "id",
+                    "start_timestamp",
+                    "stop_timestamp",
+                    "start_core",
+                    "stop_core",
+                    "start_pkg",
+                    "stop_pkg",
+                ],
             )
             .unwrap();
         }
