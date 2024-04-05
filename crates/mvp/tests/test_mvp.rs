@@ -42,9 +42,7 @@ fn test_mvp_infinite_st() {
 
     loop {
         unsafe { start_rapl(func1.as_ptr()) };
+        std::thread::sleep(std::time::Duration::from_secs(60));
         unsafe { stop_rapl(func1.as_ptr()) };
-
-        // Sleep for 5 seconds
-        std::thread::sleep(std::time::Duration::from_secs(5));
     }
 }
