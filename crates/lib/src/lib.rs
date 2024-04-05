@@ -130,9 +130,7 @@ pub fn convert_rapl_msr_register_to_joules(
             let pkg = if let Some(pkg) = curr.pkg.checked_sub(prev.pkg) {
                 pkg as f64 * energy_unit
             } else {
-                // TOOD: Handle overflow once the value has been found
-                panic!("Overflow, prev pkg: {}, curr pkg {}", prev.pkg, curr.pkg);
-                //(u32::MAX - prev.pkg + curr.pkg + 1) as f64 * energy_unit
+                (u32::MAX - prev.pkg as u32 + curr.pkg as u32) as f64 * energy_unit
             };
             let dram = (curr.dram - prev.dram) as f64 * energy_unit;
 
@@ -148,9 +146,7 @@ pub fn convert_rapl_msr_register_to_joules(
             let pkg = if let Some(pkg) = curr.pkg.checked_sub(prev.pkg) {
                 pkg as f64 * energy_unit
             } else {
-                // TOOD: Handle overflow once the value has been found
-                panic!("Overflow, prev pkg: {}, curr pkg {}", prev.pkg, curr.pkg);
-                //(u32::MAX - prev.pkg + curr.pkg + 1) as f64 * energy_unit
+                (u32::MAX - prev.pkg as u32 + curr.pkg as u32) as f64 * energy_unit
             };
 
             RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
