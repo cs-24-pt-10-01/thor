@@ -41,6 +41,7 @@ fn test_mvp_infinite_st() {
     let func1 = CString::new("FunctionMT").unwrap();
 
     loop {
+        // TODO: Can also just disable conversion to joules and get raw values, then check the file manually. Do it if no overflow occurs
         unsafe { start_rapl(func1.as_ptr()) };
         std::thread::sleep(std::time::Duration::from_secs(60));
         unsafe { stop_rapl(func1.as_ptr()) };
