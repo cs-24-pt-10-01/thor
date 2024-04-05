@@ -34,3 +34,13 @@ fn test_mvp_1000_mt() {
         handle.join().unwrap();
     }
 }
+
+#[test]
+fn test_mvp_infinite_st() {
+    let func1 = CString::new("FunctionMT").unwrap();
+
+    loop {
+        unsafe { start_rapl(func1.as_ptr()) };
+        unsafe { stop_rapl(func1.as_ptr()) };
+    }
+}
