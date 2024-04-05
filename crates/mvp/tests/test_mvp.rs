@@ -35,6 +35,7 @@ fn test_mvp_1000_mt() {
     }
 }
 
+// cargo test --release --package thor-mvp --test test_mvp -- test_mvp_infinite_st --exact --nocapture
 #[test]
 fn test_mvp_infinite_st() {
     let func1 = CString::new("FunctionMT").unwrap();
@@ -42,5 +43,8 @@ fn test_mvp_infinite_st() {
     loop {
         unsafe { start_rapl(func1.as_ptr()) };
         unsafe { stop_rapl(func1.as_ptr()) };
+
+        // Sleep for 5 seconds
+        std::thread::sleep(std::time::Duration::from_secs(5));
     }
 }
