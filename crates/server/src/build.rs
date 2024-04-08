@@ -1,7 +1,7 @@
 use crate::component_def::Build;
-use std::env;
 use std::fs::remove_dir_all;
-use std::process::Command;
+use std::process::{Command, Output};
+use std::{env, io};
 
 pub struct GitBuild {}
 
@@ -14,11 +14,10 @@ impl Build for GitBuild {
         let current_dir = env::current_dir().unwrap();
 
         // Clone repo using git
-        Command::new("git")
-            .arg("clone")
-            .arg(repo)
-            .output()
-            .expect("failed to clone repo");
+        try_command(
+            Command::new("git").arg("clone").arg(repo),
+            "failed to clone repo",
+        );
 
         // Change directory to the repo
         env::set_current_dir(repo_name.clone()).unwrap();
@@ -26,15 +25,15 @@ impl Build for GitBuild {
         // run script (run with bash for linux and powershell for windows)
         println!("starting process {}...", repo_name);
         if cfg!(target_os = "windows") {
-            Command::new("powershell")
-                .arg("./run.ps1")
-                .output()
-                .expect("failed to execute process");
+            try_command(
+                Command::new("powershell").arg("./run.ps1"),
+                "failed to execute process",
+            );
         } else {
-            Command::new("bash")
-                .arg("run.sh")
-                .output()
-                .expect("failed to execute process");
+            try_command(
+                Command::new("bash").arg("run.sh"),
+                "failed to execute process",
+            )
         };
         println!("process finished");
 
@@ -45,5 +44,17 @@ impl Build for GitBuild {
         remove_dir_all(repo_name).unwrap();
 
         true
+    }
+}
+
+fn try_command(command: &mut Command, error_message: &str) {
+    let output = command.output().expect(error_message);
+
+    if output.stderr.len() > 0 {
+        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    if output.stdout.len() > 0 {
+        println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
     }
 }
