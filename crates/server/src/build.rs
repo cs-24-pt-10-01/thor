@@ -6,7 +6,7 @@ use std::{env, io};
 pub struct GitBuild {}
 
 impl Build for GitBuild {
-    fn build(&self, repo: String) -> bool {
+    fn build(&self, repo: String) -> Result<(), io::Error> {
         let repo_name = repo.clone().split("/").last().unwrap().to_string();
         let repo_name = repo_name[0..repo_name.len() - 4].to_string(); // remove .git from end
 
@@ -17,23 +17,23 @@ impl Build for GitBuild {
         try_command(
             Command::new("git").arg("clone").arg(repo),
             "failed to clone repo",
-        );
+        )?;
 
         // Change directory to the repo
         env::set_current_dir(repo_name.clone()).unwrap();
 
         // run script (run with bash for linux and powershell for windows)
-        println!("starting process {}...", repo_name);
+        println!("starting process {}", repo_name);
         if cfg!(target_os = "windows") {
             try_command(
                 Command::new("powershell").arg("./run.ps1"),
                 "failed to execute process",
-            );
+            )?;
         } else {
             try_command(
                 Command::new("bash").arg("run.sh"),
                 "failed to execute process",
-            )
+            )?;
         };
         println!("process finished");
 
@@ -43,11 +43,11 @@ impl Build for GitBuild {
         // Removing the cloned repo
         remove_dir_all(repo_name).unwrap();
 
-        true
+        Ok(())
     }
 }
 
-fn try_command(command: &mut Command, error_message: &str) {
+fn try_command(command: &mut Command, error_message: &str) -> Result<(), io::Error> {
     let output = command.output().expect(error_message);
 
     if output.stderr.len() > 0 {
@@ -57,4 +57,5 @@ fn try_command(command: &mut Command, error_message: &str) {
     if output.stdout.len() > 0 {
         println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
     }
+    Ok(())
 }

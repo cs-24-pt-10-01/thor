@@ -1,3 +1,5 @@
+use std::io;
+
 use anyhow::Result;
 
 pub trait Measurement<T> {
@@ -9,7 +11,7 @@ pub trait Measurement<T> {
 }
 
 pub trait Build {
-    fn build(&self, repo: String) -> bool; // returns whether it succeded
+    fn build(&self, repo: String) -> Result<(), io::Error>; // returns whether it succeded
 }
 
 pub trait StartProcess {
