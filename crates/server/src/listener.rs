@@ -135,7 +135,13 @@ async fn handle_remote_connection(
 
     thread::spawn(move || {
         // build and start process
-        GitBuild {}.build(repo);
+        let res = GitBuild {}.build(repo);
+        match res {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Failed to build repo: {:?}", e);
+            }
+        }
 
         // waiting for measurements to be sent
         while (!LOCAL_CLIENT_PACKET_QUEUE.is_empty()) {
