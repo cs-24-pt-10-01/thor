@@ -1,6 +1,6 @@
 use crate::component_def::Build;
 use std::fs::remove_dir_all;
-use std::process::{Command, Output};
+use std::process::Command;
 use std::{env, io};
 
 pub struct GitBuild {}

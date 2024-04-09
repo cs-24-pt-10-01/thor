@@ -30,8 +30,6 @@ fn main() {
 
     let build = GitBuild {};
 
-    // test
-
     let mut measure = RaplSampler::new(
         config.thor.max_sample_age_millis as u128,
         config.thor.sampling_interval_micros,

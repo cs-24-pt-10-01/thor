@@ -133,22 +133,23 @@ async fn handle_remote_connection(
         return;
     }
 
+    // Thread for building and running process
     thread::spawn(move || {
         // build and start process
         let res = GitBuild {}.build(repo);
         match res {
             Ok(_) => {}
             Err(e) => {
-                println!("Failed to build repo: {:?}", e);
+                println!("Failed to build and run repo: {:?}", e);
             }
         }
 
         // waiting for measurements to be sent
-        while (!LOCAL_CLIENT_PACKET_QUEUE.is_empty()) {
+        while !LOCAL_CLIENT_PACKET_QUEUE.is_empty() {
             thread::sleep(Duration::from_secs(1));
         }
 
-        // Disconnecting client
+        // Disconnecting client measurement is done
         // TODO this can break with multiple clients are connected.
         match remote_tcpstreams.lock().unwrap().pop() {
             Some(s) => {
