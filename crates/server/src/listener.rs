@@ -5,6 +5,7 @@ use serde_json;
 use std::{
     collections::VecDeque,
     io::Write,
+    net::Shutdown,
     sync::{Arc, Mutex},
     thread,
     time::{Duration, SystemTime},
@@ -12,7 +13,10 @@ use std::{
 use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::RaplMeasurement;
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
-use tokio::{io::AsyncReadExt, net::TcpListener};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+};
 
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
 
@@ -125,7 +129,7 @@ async fn handle_remote_connection(
         .push(socket.into_std().unwrap());
 
     if repo == "none" {
-        println!("No repo provided");
+        println!("No repo provided, client assigned as observer");
         return;
     }
 
@@ -140,8 +144,14 @@ async fn handle_remote_connection(
 
         // Disconnecting client
         // TODO this can break with multiple clients are connected.
-        let s = remote_tcpstreams.lock().unwrap().pop();
-        s.unwrap().shutdown(std::net::Shutdown::Both).unwrap();
+        match remote_tcpstreams.lock().unwrap().pop() {
+            Some(s) => {
+                s.shutdown(std::net::Shutdown::Both).unwrap();
+            }
+            None => {
+                println!("Could not disconnect client, client might already be disconnected.");
+            }
+        }
     });
 }
 
@@ -174,8 +184,6 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 
         // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
 
-        // TODO handle disconnected clients
-
         if local_client_packets.is_empty() {
             //keeping the sampler alive
             measurement.get_measurement(
@@ -195,10 +203,8 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             // Get a lock on the remote connections
             let mut remote_connections_lock = remote_connections.lock().unwrap();
 
-            // Send the remote client packets to the remote clients if there is any connections available
             if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
-                for conn in remote_connections_lock.iter_mut() {
-                    // Serializing to Json
+                remote_connections_lock.retain_mut(|conn| {
                     let serialized_packet = serde_json::to_vec(&remote_client_packets).unwrap();
 
                     // blocks if the packets is over 1 Mb
@@ -206,11 +212,19 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                         conn.set_nonblocking(false).unwrap();
                     }
                     // sending packets
-                    conn.write_all(&serialized_packet).unwrap();
-                    conn.write_all("end".as_bytes()).unwrap();
-
-                    conn.set_nonblocking(true).unwrap();
-                }
+                    match send_packet(conn, &serialized_packet) {
+                        Ok(_) => {
+                            conn.set_nonblocking(true).unwrap();
+                            true
+                        }
+                        Err(_) => {
+                            // Can not send to client, remove the connection
+                            println!("Client did not accept the packet, removing connection");
+                            conn.shutdown(Shutdown::Both).unwrap();
+                            false
+                        }
+                    }
+                });
                 remote_client_packets.clear();
             }
         }
@@ -218,6 +232,14 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
         // Sleep for the duration
         thread::sleep(duration);
     }
+}
+
+fn send_packet(
+    conn: &mut std::net::TcpStream,
+    serialized_packet: &Vec<u8>,
+) -> Result<(), std::io::Error> {
+    conn.write_all(serialized_packet)?;
+    conn.write_all("end".as_bytes())
 }
 
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
