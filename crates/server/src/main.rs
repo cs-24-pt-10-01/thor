@@ -9,7 +9,7 @@ mod start_process;
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
 // implementations of components
-use crate::build::BuilderImplem;
+use crate::build::GitBuild;
 use crate::listener::ListenerImplem;
 use crate::measurement::RaplSampler;
 use crate::start_process::StartImplem;
@@ -28,7 +28,7 @@ fn main() {
 
     let start = StartImplem {};
 
-    let build = BuilderImplem {};
+    let build = GitBuild {};
 
     let mut measure = RaplSampler::new(
         config.thor.max_sample_age_millis as u128,

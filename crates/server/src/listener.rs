@@ -1,9 +1,11 @@
+use crate::build::GitBuild;
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
 use serde_json;
 use std::{
     collections::VecDeque,
     io::Write,
+    net::Shutdown,
     sync::{Arc, Mutex},
     thread,
     time::{Duration, SystemTime},
@@ -11,7 +13,10 @@ use std::{
 use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::RaplMeasurement;
 use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
-use tokio::{io::AsyncReadExt, net::TcpListener};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpListener,
+};
 
 static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
 
@@ -67,7 +72,7 @@ async fn listen(server_ip: String, remote_tcpstreams: Arc<Mutex<Vec<std::net::Tc
         if connection_type == ConnectionType::Local as u8 {
             handle_local_connection(socket);
         } else {
-            handle_remote_connection(remote_tcpstreams.clone(), socket);
+            handle_remote_connection(remote_tcpstreams.clone(), socket).await;
         }
     }
 }
@@ -105,14 +110,56 @@ fn handle_local_connection(mut socket: tokio::net::TcpStream) {
     });
 }
 
-fn handle_remote_connection(
+async fn handle_remote_connection(
     remote_tcpstreams: Arc<Mutex<Vec<std::net::TcpStream>>>,
-    socket: tokio::net::TcpStream,
+    mut socket: tokio::net::TcpStream,
 ) {
+    // Getting repo from client
+    let mut buf = Vec::new();
+    socket.read_buf(&mut buf).await.unwrap(); // url is expected to be within on packet
+
+    let repo = String::from_utf8(buf.to_vec())
+        .unwrap()
+        .trim_matches(char::from(0))
+        .to_string();
+
     remote_tcpstreams
         .lock()
         .unwrap()
         .push(socket.into_std().unwrap());
+
+    if repo == "none" {
+        println!("No repo provided, client assigned as observer");
+        return;
+    }
+
+    // Thread for building and running process
+    thread::spawn(move || {
+        // build and start process
+        let res = GitBuild {}.build(repo);
+        match res {
+            Ok(_) => {}
+            Err(e) => {
+                println!("Failed to build and run repo: {:?}", e);
+            }
+        }
+
+        // waiting for measurements to be sent
+        while !LOCAL_CLIENT_PACKET_QUEUE.is_empty() {
+            thread::sleep(Duration::from_secs(1));
+        }
+
+        // Disconnecting client measurement is done
+        // TODO this can break with multiple clients are connected.
+        match remote_tcpstreams.lock().unwrap().pop() {
+            Some(s) => {
+                s.shutdown(std::net::Shutdown::Both).unwrap();
+            }
+            None => {
+                println!("Could not disconnect client, client might already be disconnected.");
+            }
+        }
+    });
 }
 
 fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
@@ -144,8 +191,6 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
 
         // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
 
-        // TODO handle disconnected clients
-
         if local_client_packets.is_empty() {
             //keeping the sampler alive
             measurement.get_measurement(
@@ -165,10 +210,8 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
             // Get a lock on the remote connections
             let mut remote_connections_lock = remote_connections.lock().unwrap();
 
-            // Send the remote client packets to the remote clients if there is any connections available
             if !remote_connections_lock.is_empty() && !remote_client_packets.is_empty() {
-                for conn in remote_connections_lock.iter_mut() {
-                    // Serializing to Json
+                remote_connections_lock.retain_mut(|conn| {
                     let serialized_packet = serde_json::to_vec(&remote_client_packets).unwrap();
 
                     // blocks if the packets is over 1 Mb
@@ -176,11 +219,19 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                         conn.set_nonblocking(false).unwrap();
                     }
                     // sending packets
-                    conn.write_all(&serialized_packet).unwrap();
-                    conn.write_all("end".as_bytes()).unwrap();
-
-                    conn.set_nonblocking(true).unwrap();
-                }
+                    match send_packet(conn, &serialized_packet) {
+                        Ok(_) => {
+                            conn.set_nonblocking(true).unwrap();
+                            true
+                        }
+                        Err(_) => {
+                            // Can not send to client, remove the connection
+                            println!("Client did not accept the packet, removing connection");
+                            conn.shutdown(Shutdown::Both).unwrap();
+                            false
+                        }
+                    }
+                });
                 remote_client_packets.clear();
             }
         }
@@ -188,6 +239,14 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
         // Sleep for the duration
         thread::sleep(duration);
     }
+}
+
+fn send_packet(
+    conn: &mut std::net::TcpStream,
+    serialized_packet: &Vec<u8>,
+) -> Result<(), std::io::Error> {
+    conn.write_all(serialized_packet)?;
+    conn.write_all("end".as_bytes())
 }
 
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
