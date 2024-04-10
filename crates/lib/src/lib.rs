@@ -126,7 +126,11 @@ pub fn convert_rapl_msr_register_to_joules(
     match (prev_measurement, curr_measurement) {
         (RaplMeasurement::Intel(prev), RaplMeasurement::Intel(curr)) => {
             let pp0 = (curr.pp0 - prev.pp0) as f64 * energy_unit;
-            let pp1 = (curr.pp1 - prev.pp1) as f64 * energy_unit;
+            let pp1 = if let Some(pp1) = curr.pp1.checked_sub(prev.pp1) {
+                pp1 as f64 * energy_unit
+            } else {
+                (u32::MAX - prev.pp1 as u32 + curr.pp1 as u32) as f64 * energy_unit
+            };
             let pkg = if let Some(pkg) = curr.pkg.checked_sub(prev.pkg) {
                 pkg as f64 * energy_unit
             } else {
