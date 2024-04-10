@@ -48,6 +48,26 @@ pub enum RaplMeasurement {
     AMD(AmdRaplRegisters),
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct IntelRaplRegistersJoules {
+    pub pp0: f64,
+    pub pp1: f64,
+    pub pkg: f64,
+    pub dram: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub struct AmdRaplRegistersJoules {
+    pub core: f64,
+    pub pkg: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub enum RaplMeasurementJoules {
+    Intel(IntelRaplRegistersJoules),
+    AMD(AmdRaplRegistersJoules),
+}
+
 #[bitfield(u64)]
 #[derive(PartialEq, Eq)] // <- Attributes after `bitfield` are carried over
 struct IntelRaplPowerUnits {
@@ -88,6 +108,55 @@ pub fn read_rapl_msr_registers() -> RaplMeasurement {
 
     // Read and return the RAPL measurement
     read_rapl_measurement()
+}
+
+pub fn convert_rapl_msr_register_to_joules(
+    prev_measurement: RaplMeasurement,
+    curr_measurement: RaplMeasurement,
+) -> RaplMeasurementJoules {
+    // Get the power unit
+    let power_unit = *RAPL_POWER_UNITS.get_or_init(|| read_rapl_msr_power_unit());
+
+    // Shift the power unit by 8 bits and then AND it with 0x1f
+    let joule_unit = (power_unit >> 8) & 0x1f;
+
+    // do mod pow 0.5 ^ joule_unit
+    let energy_unit = 0.5f64.powi(joule_unit as i32);
+
+    match (prev_measurement, curr_measurement) {
+        (RaplMeasurement::Intel(prev), RaplMeasurement::Intel(curr)) => {
+            let pp0 = (curr.pp0 - prev.pp0) as f64 * energy_unit;
+            let pp1 = if let Some(pp1) = curr.pp1.checked_sub(prev.pp1) {
+                pp1 as f64 * energy_unit
+            } else {
+                (u32::MAX - prev.pp1 as u32 + curr.pp1 as u32) as f64 * energy_unit
+            };
+            let pkg = if let Some(pkg) = curr.pkg.checked_sub(prev.pkg) {
+                pkg as f64 * energy_unit
+            } else {
+                (u32::MAX - prev.pkg as u32 + curr.pkg as u32) as f64 * energy_unit
+            };
+            let dram = (curr.dram - prev.dram) as f64 * energy_unit;
+
+            RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
+                pp0,
+                pp1,
+                pkg,
+                dram,
+            })
+        }
+        (RaplMeasurement::AMD(prev), RaplMeasurement::AMD(curr)) => {
+            let core = (curr.core.wrapping_sub(prev.core)) as f64 * energy_unit;
+            let pkg = if let Some(pkg) = curr.pkg.checked_sub(prev.pkg) {
+                pkg as f64 * energy_unit
+            } else {
+                (u32::MAX - prev.pkg as u32 + curr.pkg as u32) as f64 * energy_unit
+            };
+
+            RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
+        }
+        _ => panic!("Previous and current RAPL measurements do not match"),
+    }
 }
 
 /// Read the RAPL MSR power unit register. This is a separate function because it is only needed once.
