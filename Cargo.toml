@@ -1,5 +1,14 @@
 [workspace]
-members = ["crates/*"]
+members = [
+    "crates/lib",
+    "crates/local-client",
+    #"crates/minimal-clients/*",
+    "crates/mvp",
+    "crates/remote-client",
+    "crates/server",
+    "crates/shared",
+    "crates/shared-lib-sync",
+]
 resolver = "2"
 
 [workspace.package]
