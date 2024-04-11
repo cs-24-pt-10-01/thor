@@ -2,7 +2,7 @@
 members = [
     "crates/lib",
     "crates/local-client",
-    #"crates/minimal-clients/*",
+    "crates/minimal-clients/*",
     "crates/mvp",
     "crates/remote-client",
     "crates/server",
