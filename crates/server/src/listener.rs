@@ -115,8 +115,13 @@ async fn handle_remote_connection(
     mut socket: tokio::net::TcpStream,
 ) {
     // Getting repo from client
-    let mut buf = Vec::new();
-    socket.read_buf(&mut buf).await.unwrap(); // url is expected to be within on packet
+    let repo_len = socket.read_u16().await.unwrap();
+
+    // Getting link
+    let mut buf = vec![0; repo_len as usize];
+    socket.read_exact(&mut buf).await.unwrap();
+
+    //socket.read_buf(&mut buf).await.unwrap(); // url is expected to be within on packet
 
     let repo = String::from_utf8(buf.to_vec())
         .unwrap()
