@@ -16,8 +16,7 @@ let dataBuffer = Buffer.alloc(0);
 
 client.connect({ port: port, host: host }, function () {
     client.write("1"); // indicating client stream
-    client.write(repo.length);
-    client.write(repo);
+    client.write(repo + "#");
     console.log('Connected');
 });
 
