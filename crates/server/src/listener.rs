@@ -27,6 +27,15 @@ pub struct ListenerImplem {
     pub remote_packet_queue_cycle: u64,
 }
 
+// Needle for the end of a string (used for repoes)
+const NEEDLE: &[u8] = "#".as_bytes();
+
+// max size for repo url
+const MAX_REPO_SIZE: usize = 1024;
+
+// Delimiter for the send measurements to the clients
+const MEASUREMENTS_DELIMITER: &[u8] = "end".as_bytes();
+
 impl Listener<RaplMeasurement> for ListenerImplem {
     fn start_listening<S: StartProcess, B: Build, M: Measurement<RaplMeasurement>>(
         &self,
@@ -114,14 +123,22 @@ async fn handle_remote_connection(
     remote_tcpstreams: Arc<Mutex<Vec<std::net::TcpStream>>>,
     mut socket: tokio::net::TcpStream,
 ) {
-    // Getting repo from client
     let mut buf = Vec::new();
-    socket.read_buf(&mut buf).await.unwrap(); // url is expected to be within on packet
+    while !buf.ends_with(NEEDLE) && buf.len() < MAX_REPO_SIZE {
+        socket.read_buf(&mut buf).await.unwrap();
+    }
 
-    let repo = String::from_utf8(buf.to_vec())
-        .unwrap()
-        .trim_matches(char::from(0))
-        .to_string();
+    buf = buf[0..buf.len() - NEEDLE.len()].to_vec();
+
+    let repo = match String::from_utf8(buf) {
+        Ok(repo) => repo.trim_matches(char::from(0)).to_string(),
+        Err(e) => {
+            println!("Failed to parse repo: {:?}", e);
+            return;
+        }
+    };
+
+    println!("Received repo: {:?}", repo);
 
     remote_tcpstreams
         .lock()
@@ -246,7 +263,7 @@ fn send_packet(
     serialized_packet: &Vec<u8>,
 ) -> Result<(), std::io::Error> {
     conn.write_all(serialized_packet)?;
-    conn.write_all("end".as_bytes())
+    conn.write_all(MEASUREMENTS_DELIMITER)
 }
 
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
