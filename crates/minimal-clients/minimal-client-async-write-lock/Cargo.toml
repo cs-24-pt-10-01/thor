@@ -1,5 +1,5 @@
 [package]
-name = "thor-minimal-client-async-lockfree"
+name = "thor-minimal-client-async-lock"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,8 +9,8 @@ crate-type = ["lib", "cdylib"]
 [dependencies]
 bincode = { workspace = true }
 serde = { workspace = true }
-thor-shared = { path = "../shared" }
+thor-shared = { path = "../../shared" }
 thread-id = { workspace = true }
 crossbeam = { workspace = true }
-thor-lib = { path = "../lib" }
+thor-lib = { path = "../../lib" }
 csv = "1"
