@@ -61,6 +61,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             write_to_csv(
                 (
                     id.as_ref(),
+                    thread_id,
                     start_timestamp,
                     stop_timestamp,
                     intel.pp0,
@@ -70,6 +71,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
                 ),
                 [
                     "id",
+                    "thread_id",
                     "start_timestamp",
                     "stop_timestamp",
                     "pp0",
@@ -84,12 +86,20 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             write_to_csv(
                 (
                     id.as_ref(),
+                    thread_id,
                     start_timestamp,
                     stop_timestamp,
                     amd.core,
                     amd.pkg,
                 ),
-                ["id", "start_timestamp", "stop_timestamp", "core", "pkg"],
+                [
+                    "id",
+                    "thread_id",
+                    "start_timestamp",
+                    "stop_timestamp",
+                    "core",
+                    "pkg",
+                ],
             )
             .unwrap();
         }
