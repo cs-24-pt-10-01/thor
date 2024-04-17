@@ -50,7 +50,14 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         .as_mut()
         .expect("RAPL hashmap is None")
         .remove(&(id.as_ref().to_string(), thread_id))
-        .expect("Failed to remove RAPL registers from hashmap");
+        .expect(
+            format!(
+                "Failed to remove RAPL registers from hashmap, id: {}, thread_id: {}",
+                id.as_ref(),
+                thread_id
+            )
+            .as_str(),
+        );
 
     let rapl_measurement_joules =
         convert_rapl_msr_register_to_joules(start_rapl_registers, stop_rapl_registers);
