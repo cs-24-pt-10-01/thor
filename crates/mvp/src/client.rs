@@ -20,8 +20,9 @@ pub fn start_rapl(id: impl AsRef<str>) {
         *RAPLMEASUREMENTS_HASHMAP.lock().unwrap() = Some(HashMap::new());
     });
 
-    let timestamp = get_timestamp_millis();
+    let thread_id = thread_id::get();
 
+    let timestamp = get_timestamp_millis();
     let rapl_registers = read_rapl_msr_registers();
 
     // Insert the RAPL registers into the hashmap
@@ -31,15 +32,16 @@ pub fn start_rapl(id: impl AsRef<str>) {
         .as_mut()
         .expect("RAPL hashmap is None")
         .insert(
-            (id.as_ref().to_string(), thread_id::get()),
+            (id.as_ref().to_string(), thread_id),
             (rapl_registers, timestamp),
         );
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
     let stop_rapl_registers = read_rapl_msr_registers();
-
     let stop_timestamp = get_timestamp_millis();
+
+    let thread_id = thread_id::get();
 
     // Get the RAPL registers from the hashmap
     let (start_rapl_registers, start_timestamp) = RAPLMEASUREMENTS_HASHMAP
@@ -47,8 +49,15 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         .expect("Failed to lock RAPL hashmap")
         .as_mut()
         .expect("RAPL hashmap is None")
-        .remove(&(id.as_ref().to_string(), thread_id::get()))
-        .expect("Failed to remove RAPL registers from hashmap");
+        .remove(&(id.as_ref().to_string(), thread_id))
+        .expect(
+            format!(
+                "Failed to remove RAPL registers from hashmap, id: {}, thread_id: {}",
+                id.as_ref(),
+                thread_id
+            )
+            .as_str(),
+        );
 
     let rapl_measurement_joules =
         convert_rapl_msr_register_to_joules(start_rapl_registers, stop_rapl_registers);
@@ -59,6 +68,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             write_to_csv(
                 (
                     id.as_ref(),
+                    thread_id,
                     start_timestamp,
                     stop_timestamp,
                     intel.pp0,
@@ -68,6 +78,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
                 ),
                 [
                     "id",
+                    "thread_id",
                     "start_timestamp",
                     "stop_timestamp",
                     "pp0",
@@ -82,12 +93,20 @@ pub fn stop_rapl(id: impl AsRef<str>) {
             write_to_csv(
                 (
                     id.as_ref(),
+                    thread_id,
                     start_timestamp,
                     stop_timestamp,
                     amd.core,
                     amd.pkg,
                 ),
-                ["id", "start_timestamp", "stop_timestamp", "core", "pkg"],
+                [
+                    "id",
+                    "thread_id",
+                    "start_timestamp",
+                    "stop_timestamp",
+                    "core",
+                    "pkg",
+                ],
             )
             .unwrap();
         }
