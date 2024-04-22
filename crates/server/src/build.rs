@@ -7,6 +7,12 @@ pub struct GitBuild {}
 
 impl Build for GitBuild {
     fn build(&self, repo: String) -> Result<(), io::Error> {
+        let split: Vec<&str> = repo.split(" ").collect();
+
+        println!("split: {:?}", split);
+
+        let repo = split[0].to_string();
+
         let repo_name = repo.clone().split("/").last().unwrap().to_string();
         let repo_name = repo_name[0..repo_name.len() - 4].to_string(); // remove .git from end
 
@@ -21,6 +27,16 @@ impl Build for GitBuild {
 
         // Change directory to the repo
         env::set_current_dir(repo_name.clone()).unwrap();
+
+        // switching branch if specified
+        if split.len() > 1 {
+            let branch = split[1].to_string();
+            // Checkout to the branch
+            try_command(
+                Command::new("git").arg("checkout").arg(branch),
+                "failed to checkout branch",
+            )?;
+        }
 
         // run script (run with bash for linux and powershell for windows)
         println!("starting process {}", repo_name);
