@@ -40,7 +40,7 @@ fn main() {
 
     let listen = ListenerImplem {
         ip: config.thor.server_ip.clone(),
-        remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle_millis,
+        remote_packet_queue_cycle: config.thor.client_packet_queue_cycle_millis,
     };
     listen.start_listening(start, build, &mut measure).unwrap();
 }

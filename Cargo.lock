@@ -376,20 +376,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "remote-client"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "csv",
- "serde",
- "serde_json",
- "thor-lib",
- "thor-shared",
- "tokio",
- "toml",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -496,6 +482,20 @@ dependencies = [
  "once_cell",
  "rayon",
  "windows 0.52.0",
+]
+
+[[package]]
+name = "test-client"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "csv",
+ "serde",
+ "serde_json",
+ "thor-lib",
+ "thor-shared",
+ "tokio",
+ "toml",
 ]
 
 [[package]]

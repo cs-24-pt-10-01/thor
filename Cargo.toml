@@ -3,7 +3,7 @@ members = [
     "crates/lib",
     "crates/minimal-clients/*",
     "crates/mvp",
-    "crates/remote-client",
+    "crates/test-client",
     "crates/server",
     "crates/shared",
     "crates/shared-lib-sync",
