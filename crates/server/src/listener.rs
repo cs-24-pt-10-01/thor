@@ -12,13 +12,13 @@ use std::{
 };
 use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::RaplMeasurement;
-use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
+use thor_shared::{ConnectionType, ProcessUnderTestPacket, RemoteClientPacket};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
 };
 
-static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<LocalClientPacket> = SegQueue::new();
+static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<ProcessUnderTestPacket> = SegQueue::new();
 
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
@@ -110,7 +110,7 @@ fn handle_local_connection(mut socket: tokio::net::TcpStream) {
             }
 
             // Deserialize the packet using the buffer
-            let local_client_packet: LocalClientPacket =
+            let local_client_packet: ProcessUnderTestPacket =
                 bincode::deserialize(&client_buffer).unwrap();
 
             // Push the packet to the local client packet queue
@@ -267,7 +267,7 @@ fn send_packet(
 }
 
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
-    mut local_client_packets: VecDeque<LocalClientPacket>,
+    mut local_client_packets: VecDeque<ProcessUnderTestPacket>,
     measurement: &mut M,
     remote_client_packets: &mut Vec<RemoteClientPacket>,
 ) {
@@ -279,7 +279,7 @@ fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
         let rapl_measurement = measurements[x].clone();
         let local_client_packet = local_client_packets.pop_front().unwrap();
         let remote_client_packet = RemoteClientPacket {
-            local_client_packet,
+            process_under_test_packet: local_client_packet,
             rapl_measurement,
         };
         remote_client_packets.push(remote_client_packet);

@@ -13,7 +13,7 @@ use std::{
 };
 use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
-use thor_shared::{ConnectionType, LocalClientPacket, RemoteClientPacket};
+use thor_shared::{ConnectionType, ProcessUnderTestPacket, RemoteClientPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
 use crate::component_def::{Build, Listener, Measurement, StartProcess};

@@ -64,14 +64,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match remote_client_packet.rapl_measurement {
                     Intel(ref intel_rapl_registers) => {
                         wtr.serialize((
-                            remote_client_packet.local_client_packet,
+                            remote_client_packet.process_under_test_packet,
                             intel_rapl_registers,
                         ))?;
                         wtr.flush()?;
                     }
                     AMD(ref amd_rapl_registers) => {
                         wtr.serialize((
-                            remote_client_packet.local_client_packet,
+                            remote_client_packet.process_under_test_packet,
                             amd_rapl_registers,
                         ))?;
                         wtr.flush()?;

@@ -5,18 +5,18 @@ use std::{
     sync::{Mutex, Once},
     time::SystemTime,
 };
-use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
+use thor_shared::{ConnectionType, ProcessUnderTestPacket, ProcessUnderTestPacketOperation};
 
 static STREAM_INIT: Once = Once::new();
 
 static CONNECTION: Mutex<Option<TcpStream>> = Mutex::new(None);
 
 pub fn start_rapl(id: impl AsRef<str>) {
-    let packet = LocalClientPacket {
+    let packet = ProcessUnderTestPacket {
         id: id.as_ref().to_string(),
         process_id: process::id(),
         thread_id: thread_id::get(),
-        operation: LocalClientPacketOperation::Start,
+        operation: ProcessUnderTestPacketOperation::Start,
         timestamp: SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -27,11 +27,11 @@ pub fn start_rapl(id: impl AsRef<str>) {
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
-    let packet = LocalClientPacket {
+    let packet = ProcessUnderTestPacket {
         id: id.as_ref().to_string(),
         process_id: process::id(),
         thread_id: thread_id::get(),
-        operation: LocalClientPacketOperation::Stop,
+        operation: ProcessUnderTestPacketOperation::Stop,
         timestamp: SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -41,7 +41,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
     send_packet(packet);
 }
 
-fn send_packet(packet: LocalClientPacket) {
+fn send_packet(packet: ProcessUnderTestPacket) {
     STREAM_INIT.call_once(|| {
         // making connection
         let mut connection = TcpStream::connect("127.0.0.1:6969").unwrap();
