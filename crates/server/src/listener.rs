@@ -10,13 +10,9 @@ use std::{
     thread,
     time::{Duration, SystemTime},
 };
-use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::RaplMeasurement;
 use thor_shared::{ClientPacket, ConnectionType, ProcessUnderTestPacket};
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::TcpListener,
-};
+use tokio::{io::AsyncReadExt, net::TcpListener};
 
 static PROCESS_UNDER_TEST_PACKET_QUEUE: SegQueue<ProcessUnderTestPacket> = SegQueue::new();
 

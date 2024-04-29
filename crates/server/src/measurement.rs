@@ -1,22 +1,12 @@
+use crate::component_def::Measurement;
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
 use rangemap::RangeMap;
-use serde::Deserialize;
 use std::{
-    collections::VecDeque,
-    fs,
-    io::Write,
-    ptr::NonNull,
-    sync::{Arc, Mutex},
     thread,
     time::{Duration, SystemTime},
 };
-use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
-use thor_shared::{ClientPacket, ConnectionType, ProcessUnderTestPacket};
-use tokio::{io::AsyncReadExt, net::TcpListener};
-
-use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
 static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
 

@@ -6,7 +6,7 @@ mod measurement;
 mod start_process;
 
 // definitions of components
-use crate::component_def::{Build, Listener, Measurement, StartProcess};
+use crate::component_def::Listener;
 
 // implementations of components
 use crate::build::GitBuild;
