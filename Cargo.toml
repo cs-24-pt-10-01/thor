@@ -14,7 +14,7 @@ resolver = "2"
 rust-version = "1.75"
 edition = "2021"
 license = "MIT"
-authors = ["Jakobzs, Mads518d, Villiamfj"]
+authors = ["Jakobzs", "Mads518d", "Villiamfj"]
 
 [workspace.dependencies]
 anyhow = "1"
