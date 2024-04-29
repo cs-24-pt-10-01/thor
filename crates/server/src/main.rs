@@ -6,7 +6,7 @@ mod measurement;
 mod start_process;
 
 // definitions of components
-use crate::component_def::{Build, Listener, Measurement, StartProcess};
+use crate::component_def::Listener;
 
 // implementations of components
 use crate::build::GitBuild;
@@ -40,7 +40,7 @@ fn main() {
 
     let listen = ListenerImplem {
         ip: config.thor.server_ip.clone(),
-        remote_packet_queue_cycle: config.thor.remote_packet_queue_cycle_millis,
+        client_packet_queue_cycle: config.thor.client_packet_queue_cycle_millis,
     };
     listen.start_listening(start, build, &mut measure).unwrap();
 }

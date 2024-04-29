@@ -2,27 +2,27 @@ use serde::{Deserialize, Serialize};
 use thor_lib::RaplMeasurement;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct LocalClientPacket {
+pub struct ProcessUnderTestPacket {
     pub id: String,
     pub process_id: u32,
     pub thread_id: usize,
-    pub operation: LocalClientPacketOperation,
+    pub operation: ProcessUnderTestPacketOperation,
     pub timestamp: u128,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum LocalClientPacketOperation {
+pub enum ProcessUnderTestPacketOperation {
     Start,
     Stop,
 }
 
 pub enum ConnectionType {
-    Local = 0,
-    Remote = 1,
+    ProcessUnderTest = 0,
+    Client = 1,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RemoteClientPacket {
-    pub local_client_packet: LocalClientPacket,
+pub struct ClientPacket {
+    pub process_under_test_packet: ProcessUnderTestPacket,
     pub rapl_measurement: RaplMeasurement,
 }

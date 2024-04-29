@@ -1,25 +1,22 @@
-use crossbeam::queue::SegQueue;
 use std::{
     io::Write,
     net::TcpStream,
+    process,
     sync::{Mutex, Once},
-    thread,
-    time::{Duration, SystemTime},
+    time::SystemTime,
 };
-use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
+use thor_shared::{ConnectionType, ProcessUnderTestPacket, ProcessUnderTestPacketOperation};
 
 static STREAM_INIT: Once = Once::new();
 
 static CONNECTION: Mutex<Option<TcpStream>> = Mutex::new(None);
 
 pub fn start_rapl(id: impl AsRef<str>) {
-    // Initialize RAPL
-
-    let packet = LocalClientPacket {
+    let packet = ProcessUnderTestPacket {
         id: id.as_ref().to_string(),
-        process_id: 12345,
+        process_id: process::id(),
         thread_id: thread_id::get(),
-        operation: LocalClientPacketOperation::Start,
+        operation: ProcessUnderTestPacketOperation::Start,
         timestamp: SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -30,11 +27,11 @@ pub fn start_rapl(id: impl AsRef<str>) {
 }
 
 pub fn stop_rapl(id: impl AsRef<str>) {
-    let packet = LocalClientPacket {
+    let packet = ProcessUnderTestPacket {
         id: id.as_ref().to_string(),
-        process_id: 12345,
+        process_id: process::id(),
         thread_id: thread_id::get(),
-        operation: LocalClientPacketOperation::Stop,
+        operation: ProcessUnderTestPacketOperation::Stop,
         timestamp: SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
@@ -44,23 +41,25 @@ pub fn stop_rapl(id: impl AsRef<str>) {
     send_packet(packet);
 }
 
-fn send_packet(packet: LocalClientPacket) {
+fn send_packet(packet: ProcessUnderTestPacket) {
     STREAM_INIT.call_once(|| {
         // making connection
         let mut connection = TcpStream::connect("127.0.0.1:6969").unwrap();
 
-        // indicating that this is a local process
+        // indicating that this is a process under test process
         connection
-            .write_all(&[ConnectionType::Local as u8])
+            .write_all(&[ConnectionType::ProcessUnderTest as u8])
             .unwrap();
+        // TODO: Consider sending PID here to identify the process, as PID does not change.
+        // Then remove it from the packet
 
         *CONNECTION.lock().unwrap() = Some(connection);
     });
 
     let serialized = bincode::serialize(&packet).unwrap();
 
-    let mut binding = CONNECTION.lock().unwrap();
-    let stream = binding.as_mut().unwrap();
+    let mut connection_lock = CONNECTION.lock().unwrap();
+    let stream = connection_lock.as_mut().unwrap();
 
     // Write length and then the serialized packet
     stream.write_all(&[(serialized.len() as u8)]).unwrap();

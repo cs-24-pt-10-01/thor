@@ -1,5 +1,5 @@
+use shared_lib_sync::ffi::{start_rapl, stop_rapl};
 use std::ffi::CString;
-use thor_lib_sync::ffi::{start_rapl, stop_rapl};
 
 #[test]
 fn test_send_function() {

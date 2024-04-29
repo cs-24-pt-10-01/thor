@@ -1,5 +1,5 @@
 [package]
-name = "remote-client"
+name = "test-client"
 version = "0.1.0"
 rust-version.workspace = true
 edition.workspace = true
@@ -9,9 +9,8 @@ authors.workspace = true
 [dependencies]
 thor-shared = { path = "../shared" }
 tokio = { workspace = true }
-bincode = { workspace = true }
 csv = { workspace = true }
 thor-lib = { path = "../lib" }
 toml = { workspace = true }
 serde = { workspace = true }
-serde_json = "1.0.114"
+serde_json = { workspace = true }

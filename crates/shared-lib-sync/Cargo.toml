@@ -1,5 +1,5 @@
 [package]
-name = "thor-lib-sync"
+name = "shared-lib-sync"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,4 +11,3 @@ bincode = { workspace = true }
 serde = { workspace = true }
 thor-shared = { path = "../shared" }
 thread-id = { workspace = true }
-crossbeam = { workspace = true }
