@@ -9,22 +9,6 @@ Thor is a framework for collecting energy measurements from executed code in pro
 
 This repository is a continuation of [rapl-interface](https://github.com/cs-23-pt-9-01/rapl-interface).
 
-## Installation
-
-Start by downloading Rust from [rust-lang.org](https://www.rust-lang.org/tools/install).
-
-Then, clone the repository:
-
-```bash
-git clone https://github.com/cs-24-pt-10-01/thor.git
-```
-
-To build the project, run:
-
-```bash
-cargo build --release
-```
-
 ## Structure
 
 The repository contains the following essential crates:
@@ -38,3 +22,31 @@ These crates are intended for experiments and testing:
 
 - Minimal-client*: Experiments
 - test-client: A testing client for the Thor server
+
+## Installation
+
+Start by downloading Rust from [rust-lang.org](https://www.rust-lang.org/tools/install).
+
+Then, clone the repository:
+
+```bash
+git clone https://github.com/cs-24-pt-10-01/thor.git
+```
+
+## Compiling
+
+To build the project, run:
+
+```bash
+cargo build --release
+```
+
+## Usage
+
+Thor must run under root privileges to access the RAPL interface.
+
+To run the Thor server, execute:
+
+```bash
+sudo ./target/release/thor-server
+```
