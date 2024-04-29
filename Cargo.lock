@@ -438,7 +438,6 @@ name = "shared-lib-sync"
 version = "0.1.0"
 dependencies = [
  "bincode",
- "crossbeam",
  "serde",
  "thor-shared",
  "thread-id",

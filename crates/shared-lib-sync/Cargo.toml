@@ -11,4 +11,3 @@ bincode = { workspace = true }
 serde = { workspace = true }
 thor-shared = { path = "../shared" }
 thread-id = { workspace = true }
-crossbeam = { workspace = true }
