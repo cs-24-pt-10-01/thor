@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Connecting to server at: {}", config.server_ip);
     let mut stream = TcpStream::connect(config.server_ip).await.unwrap();
 
-    // Signify which type of client this is (it is a remote client)
+    // Signify which type of connection it is (it is a client connection)
     stream
         .write_all(&[ConnectionType::Client as u8])
         .await
@@ -56,22 +56,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if client_buffer.ends_with(END.as_bytes()) {
-            let remote_client_packets: Vec<ClientPacket> =
+            let client_packets: Vec<ClientPacket> =
                 serde_json::from_slice(&&client_buffer[..&client_buffer.len() - END.len()])
                     .unwrap();
             // Write the measurements to the CSV file
-            for remote_client_packet in remote_client_packets {
-                match remote_client_packet.rapl_measurement {
+            for client_packet in client_packets {
+                match client_packet.rapl_measurement {
                     Intel(ref intel_rapl_registers) => {
                         wtr.serialize((
-                            remote_client_packet.process_under_test_packet,
+                            client_packet.process_under_test_packet,
                             intel_rapl_registers,
                         ))?;
                         wtr.flush()?;
                     }
                     AMD(ref amd_rapl_registers) => {
                         wtr.serialize((
-                            remote_client_packet.process_under_test_packet,
+                            client_packet.process_under_test_packet,
                             amd_rapl_registers,
                         ))?;
                         wtr.flush()?;
