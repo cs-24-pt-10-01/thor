@@ -12,7 +12,7 @@ use std::{
 };
 use sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
 use thor_lib::RaplMeasurement;
-use thor_shared::{ConnectionType, ProcessUnderTestPacket, RemoteClientPacket};
+use thor_shared::{ClientPacket, ConnectionType, ProcessUnderTestPacket};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpListener,
@@ -269,7 +269,7 @@ fn send_packet(
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
     mut process_under_test_packets: VecDeque<ProcessUnderTestPacket>,
     measurement: &mut M,
-    remote_client_packets: &mut Vec<RemoteClientPacket>,
+    remote_client_packets: &mut Vec<ClientPacket>,
 ) {
     let timestamps: Vec<u128> = process_under_test_packets
         .iter()
@@ -281,7 +281,7 @@ fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
     for x in 0..process_under_test_packets.len() {
         let rapl_measurement = measurements[x].clone();
         let process_under_test_packet = process_under_test_packets.pop_front().unwrap();
-        let remote_client_packet = RemoteClientPacket {
+        let remote_client_packet = ClientPacket {
             process_under_test_packet,
             rapl_measurement,
         };

@@ -22,7 +22,7 @@ pub enum ConnectionType {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct RemoteClientPacket {
+pub struct ClientPacket {
     pub process_under_test_packet: ProcessUnderTestPacket,
     pub rapl_measurement: RaplMeasurement,
 }

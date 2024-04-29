@@ -6,7 +6,7 @@ use std::{
     fs::{self, OpenOptions},
 };
 use thor_lib::RaplMeasurement::{Intel, AMD};
-use thor_shared::{ConnectionType, RemoteClientPacket};
+use thor_shared::{ClientPacket, ConnectionType};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -56,7 +56,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
 
         if client_buffer.ends_with(END.as_bytes()) {
-            let remote_client_packets: Vec<RemoteClientPacket> =
+            let remote_client_packets: Vec<ClientPacket> =
                 serde_json::from_slice(&&client_buffer[..&client_buffer.len() - END.len()])
                     .unwrap();
             // Write the measurements to the CSV file
