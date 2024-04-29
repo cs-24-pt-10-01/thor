@@ -1,10 +1,9 @@
-use crossbeam::queue::SegQueue;
 use std::{
     io::Write,
     net::TcpStream,
+    process,
     sync::{Mutex, Once},
-    thread,
-    time::{Duration, SystemTime},
+    time::SystemTime,
 };
 use thor_shared::{ConnectionType, LocalClientPacket, LocalClientPacketOperation};
 
@@ -13,11 +12,9 @@ static STREAM_INIT: Once = Once::new();
 static CONNECTION: Mutex<Option<TcpStream>> = Mutex::new(None);
 
 pub fn start_rapl(id: impl AsRef<str>) {
-    // Initialize RAPL
-
     let packet = LocalClientPacket {
         id: id.as_ref().to_string(),
-        process_id: 12345,
+        process_id: process::id(),
         thread_id: thread_id::get(),
         operation: LocalClientPacketOperation::Start,
         timestamp: SystemTime::now()
@@ -32,7 +29,7 @@ pub fn start_rapl(id: impl AsRef<str>) {
 pub fn stop_rapl(id: impl AsRef<str>) {
     let packet = LocalClientPacket {
         id: id.as_ref().to_string(),
-        process_id: 12345,
+        process_id: process::id(),
         thread_id: thread_id::get(),
         operation: LocalClientPacketOperation::Stop,
         timestamp: SystemTime::now()
@@ -59,8 +56,8 @@ fn send_packet(packet: LocalClientPacket) {
 
     let serialized = bincode::serialize(&packet).unwrap();
 
-    let mut binding = CONNECTION.lock().unwrap();
-    let stream = binding.as_mut().unwrap();
+    let mut connection_lock = CONNECTION.lock().unwrap();
+    let stream = connection_lock.as_mut().unwrap();
 
     // Write length and then the serialized packet
     stream.write_all(&[(serialized.len() as u8)]).unwrap();
