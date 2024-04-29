@@ -50,6 +50,7 @@ fn send_packet(packet: ProcessUnderTestPacket) {
         connection
             .write_all(&[ConnectionType::ProcessUnderTest as u8])
             .unwrap();
+        // TODO: Consider sending PID here to identify the process, as PID does not change
 
         *CONNECTION.lock().unwrap() = Some(connection);
     });
