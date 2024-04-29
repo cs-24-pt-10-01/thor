@@ -1,6 +1,5 @@
 use csv::WriterBuilder;
 use serde::Deserialize;
-use serde_json;
 use std::{
     error::Error,
     fs::{self, OpenOptions},
