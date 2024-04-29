@@ -23,7 +23,7 @@ const END: &str = "end";
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // Load the config file
-    let config_file_data = fs::read_to_string("remote-client.toml")?;
+    let config_file_data = fs::read_to_string("test-client.toml")?;
     let config: Config = toml::from_str(&config_file_data)?;
 
     // Connect to the server
@@ -32,7 +32,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Signify which type of client this is (it is a remote client)
     stream
-        .write_all(&[ConnectionType::Remote as u8])
+        .write_all(&[ConnectionType::Client as u8])
         .await
         .unwrap();
 

@@ -18,7 +18,7 @@ pub enum ProcessUnderTestPacketOperation {
 
 pub enum ConnectionType {
     ProcessUnderTest = 0,
-    Remote = 1,
+    Client = 1,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
