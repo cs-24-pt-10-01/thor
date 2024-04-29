@@ -11,6 +11,30 @@ This repository is a continuation of [rapl-interface](https://github.com/cs-23-p
 
 ## Installation
 
+Start by downloading Rust from [rust-lang.org](https://www.rust-lang.org/tools/install).
+
+Then, clone the repository:
+
+```bash
+git clone https://github.com/cs-24-pt-10-01/thor.git
+```
+
+To build the project, run:
+
 ```bash
 cargo build --release
 ```
+
+## Structure
+
+The repository contains the following essential crates:
+
+- lib: A library for taking measurements with RAPL
+- shared-lib-sync: A static library used by the processes under test, which utilizes synchronous locking
+- server: The Thor server
+- shared: Shared logic
+
+These crates are intended for experiments and testing:
+
+- Minimal-client*: Experiments
+- test-client: A testing client for the Thor server
