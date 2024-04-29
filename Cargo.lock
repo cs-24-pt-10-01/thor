@@ -499,7 +499,6 @@ dependencies = [
 name = "test-client"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "csv",
  "serde",
  "serde_json",

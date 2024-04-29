@@ -9,7 +9,6 @@ authors.workspace = true
 [dependencies]
 thor-shared = { path = "../shared" }
 tokio = { workspace = true }
-bincode = { workspace = true }
 csv = { workspace = true }
 thor-lib = { path = "../lib" }
 toml = { workspace = true }
