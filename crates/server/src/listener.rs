@@ -231,8 +231,8 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                 remote_connections_lock.retain_mut(|conn| {
                     let serialized_packet = serde_json::to_vec(&remote_client_packets).unwrap();
 
-                    // blocks if the packets is over 1 Mb
-                    if serialized_packet.len() > 1000000 {
+                    // blocks if the packets is over 1 Kb
+                    if serialized_packet.len() > 1000 {
                         conn.set_nonblocking(false).unwrap();
                     }
                     // sending packets
@@ -241,9 +241,9 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
                             conn.set_nonblocking(true).unwrap();
                             true
                         }
-                        Err(_) => {
+                        Err(err) => {
                             // Can not send to client, remove the connection
-                            println!("Client did not accept the packet, removing connection");
+                            println!("Client did not accept the packet, removing connection. Error: {:?}", err);
                             conn.shutdown(Shutdown::Both).unwrap();
                             false
                         }
