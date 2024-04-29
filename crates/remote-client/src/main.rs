@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Connecting to server at: {}", config.server_ip);
     let mut stream = TcpStream::connect(config.server_ip).await.unwrap();
 
-    // Signify which type of client this is (it is a local client)
+    // Signify which type of client this is (it is a remote client)
     stream
         .write_all(&[ConnectionType::Remote as u8])
         .await

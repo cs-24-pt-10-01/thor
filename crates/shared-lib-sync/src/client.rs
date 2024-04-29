@@ -46,9 +46,9 @@ fn send_packet(packet: ProcessUnderTestPacket) {
         // making connection
         let mut connection = TcpStream::connect("127.0.0.1:6969").unwrap();
 
-        // indicating that this is a local process
+        // indicating that this is a process under test process
         connection
-            .write_all(&[ConnectionType::Local as u8])
+            .write_all(&[ConnectionType::ProcessUnderTest as u8])
             .unwrap();
 
         *CONNECTION.lock().unwrap() = Some(connection);

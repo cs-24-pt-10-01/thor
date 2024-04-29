@@ -18,7 +18,7 @@ use tokio::{
     net::TcpListener,
 };
 
-static LOCAL_CLIENT_PACKET_QUEUE: SegQueue<ProcessUnderTestPacket> = SegQueue::new();
+static PROCESS_UNDER_TEST_PACKET_QUEUE: SegQueue<ProcessUnderTestPacket> = SegQueue::new();
 
 use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
@@ -78,21 +78,21 @@ async fn listen(server_ip: String, remote_tcpstreams: Arc<Mutex<Vec<std::net::Tc
 
         // Read the connection type and handle it
         let connection_type = socket.read_u8().await.unwrap();
-        if connection_type == ConnectionType::Local as u8 {
-            handle_local_connection(socket);
+        if connection_type == ConnectionType::ProcessUnderTest as u8 {
+            handle_process_under_test_connection(socket);
         } else {
             handle_remote_connection(remote_tcpstreams.clone(), socket).await;
         }
     }
 }
 
-fn handle_local_connection(mut socket: tokio::net::TcpStream) {
+fn handle_process_under_test_connection(mut socket: tokio::net::TcpStream) {
     tokio::spawn(async move {
         let mut client_buffer = vec![0; u8::MAX as usize];
 
         loop {
             // Read the length of the packet
-            let local_client_packet_length = match socket.read_u8().await {
+            let process_under_test_packet_length = match socket.read_u8().await {
                 Ok(length) => length,
                 Err(_) => {
                     // If the client has disconnected, break the loop
@@ -102,7 +102,7 @@ fn handle_local_connection(mut socket: tokio::net::TcpStream) {
 
             // Read the packet itself
             if let Err(_) = socket
-                .read_exact(&mut client_buffer[0..local_client_packet_length as usize])
+                .read_exact(&mut client_buffer[0..process_under_test_packet_length as usize])
                 .await
             {
                 // If the client has disconnected, break the loop
@@ -110,11 +110,11 @@ fn handle_local_connection(mut socket: tokio::net::TcpStream) {
             }
 
             // Deserialize the packet using the buffer
-            let local_client_packet: ProcessUnderTestPacket =
+            let process_under_test_packet: ProcessUnderTestPacket =
                 bincode::deserialize(&client_buffer).unwrap();
 
-            // Push the packet to the local client packet queue
-            LOCAL_CLIENT_PACKET_QUEUE.push(local_client_packet);
+            // Push the packet to the process under test packet queue
+            PROCESS_UNDER_TEST_PACKET_QUEUE.push(process_under_test_packet);
         }
     });
 }
@@ -162,7 +162,7 @@ async fn handle_remote_connection(
         }
 
         // waiting for measurements to be sent
-        while !LOCAL_CLIENT_PACKET_QUEUE.is_empty() {
+        while !PROCESS_UNDER_TEST_PACKET_QUEUE.is_empty() {
             thread::sleep(Duration::from_secs(1));
         }
 
@@ -199,16 +199,16 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
     let mut remote_client_packets = Vec::new();
 
     loop {
-        let mut local_client_packets = VecDeque::new();
+        let mut process_under_test_packets = VecDeque::new();
 
-        // Extract local clients initially to allow the sampler getting ahead
-        while let Some(local_client_packet) = LOCAL_CLIENT_PACKET_QUEUE.pop() {
-            local_client_packets.push_back(local_client_packet);
+        // Extract packets from processes under test initially to allow the sampler getting ahead
+        while let Some(process_under_test_packet) = PROCESS_UNDER_TEST_PACKET_QUEUE.pop() {
+            process_under_test_packets.push_back(process_under_test_packet);
         }
 
         // TODO: Consider sleeping here if the sampler is too slow, i.e. unable to find a measurement for the current packet due to time difference
 
-        if local_client_packets.is_empty() {
+        if process_under_test_packets.is_empty() {
             //keeping the sampler alive
             measurement.get_measurement(
                 SystemTime::now()
@@ -219,7 +219,7 @@ fn send_packet_to_remote_clients<M: Measurement<RaplMeasurement>>(
         } else {
             // Create remote client packets
             create_remote_client_packets(
-                local_client_packets,
+                process_under_test_packets,
                 measurement,
                 &mut remote_client_packets,
             );
@@ -267,19 +267,22 @@ fn send_packet(
 }
 
 fn create_remote_client_packets<M: Measurement<RaplMeasurement>>(
-    mut local_client_packets: VecDeque<ProcessUnderTestPacket>,
+    mut process_under_test_packets: VecDeque<ProcessUnderTestPacket>,
     measurement: &mut M,
     remote_client_packets: &mut Vec<RemoteClientPacket>,
 ) {
-    let timestamps: Vec<u128> = local_client_packets.iter().map(|x| x.timestamp).collect();
+    let timestamps: Vec<u128> = process_under_test_packets
+        .iter()
+        .map(|x| x.timestamp)
+        .collect();
     let measurements = measurement.get_multiple_measurements(&timestamps);
 
     // handling multiple packets at a time
-    for x in 0..local_client_packets.len() {
+    for x in 0..process_under_test_packets.len() {
         let rapl_measurement = measurements[x].clone();
-        let local_client_packet = local_client_packets.pop_front().unwrap();
+        let process_under_test_packet = process_under_test_packets.pop_front().unwrap();
         let remote_client_packet = RemoteClientPacket {
-            process_under_test_packet: local_client_packet,
+            process_under_test_packet,
             rapl_measurement,
         };
         remote_client_packets.push(remote_client_packet);

@@ -17,7 +17,7 @@ pub enum ProcessUnderTestPacketOperation {
 }
 
 pub enum ConnectionType {
-    Local = 0,
+    ProcessUnderTest = 0,
     Remote = 1,
 }
 
