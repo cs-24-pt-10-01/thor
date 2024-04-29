@@ -434,6 +434,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "shared-lib-sync"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "crossbeam",
+ "serde",
+ "thor-shared",
+ "thread-id",
+]
+
+[[package]]
 name = "signal-hook-registry"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -529,17 +540,6 @@ dependencies = [
  "sysinfo",
  "thiserror",
  "windows 0.53.0",
-]
-
-[[package]]
-name = "thor-lib-sync"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "crossbeam",
- "serde",
- "thor-shared",
- "thread-id",
 ]
 
 [[package]]
