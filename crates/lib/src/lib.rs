@@ -180,8 +180,6 @@ pub fn read_rapl_msr_power_unit() -> u64 {
     power_unit.into_bits()
 }
 
-pub fn convert_joule_thing() {}
-
 #[cfg(amd)]
 fn read_rapl_measurement() -> RaplMeasurement {
     use self::amd::{AMD_MSR_CORE_ENERGY, MSR_RAPL_PKG_ENERGY_STAT};
