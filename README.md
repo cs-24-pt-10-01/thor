@@ -51,7 +51,7 @@ Ensure that MSR registers are enabled by running:
 sudo modprobe msr
 ```
 
-Then, run the Thor server on Linux by executing the following command:
+Then, run the Thor server on Linux by executing the following command in the main directory:
 
 ```bash
 sudo ./target/release/thor-server
@@ -61,7 +61,7 @@ sudo ./target/release/thor-server
 
 The Windows implementation makes use of the LibreHardwareMonitor's driver for accessing MSR registers. This program must be installed and running before starting the Thor server. It can be downloaded from [here](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
 
-After installing the driver, start the Thor server by running the following command in Windows Terminal as an administrator:
+After installing the driver, start the Thor server by running the following command in Windows Terminal as an administrator in the main directory:
 
 ```bash
 .\target\release\thor-server.exe
