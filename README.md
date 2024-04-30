@@ -54,5 +54,3 @@ For Windows, execute the following command in PowerShell as an administrator:
 ```bash
 .\target\release\thor-server.exe
 ```
-
-
