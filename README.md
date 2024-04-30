@@ -43,8 +43,16 @@ cargo build --release
 
 Thor must run under root privileges to access the RAPL interface.
 
-To run the Thor server, execute:
+To run the Thor server on Linux, execute:
 
 ```bash
 sudo ./target/release/thor-server
 ```
+
+For Windows, execute the following command in PowerShell as an administrator:
+
+```bash
+.\target\release\thor-server.exe
+```
+
+
