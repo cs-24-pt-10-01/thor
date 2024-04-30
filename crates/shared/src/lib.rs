@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use thor_lib::RaplMeasurement;
+use thor_lib::RaplMeasurementJoules;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProcessUnderTestPacket {
@@ -24,5 +24,6 @@ pub enum ConnectionType {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ClientPacket {
     pub process_under_test_packet: ProcessUnderTestPacket,
-    pub rapl_measurement: RaplMeasurement,
+    pub rapl_measurement: RaplMeasurementJoules,
+    pub pkg_overflow: u32,
 }
