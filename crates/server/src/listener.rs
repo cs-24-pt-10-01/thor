@@ -1,4 +1,7 @@
-use crate::build::GitBuild;
+use crate::{
+    build::GitBuild,
+    component_def::{Build, Listener, Measurement, StartProcess},
+};
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
 use serde_json;
@@ -15,8 +18,6 @@ use thor_shared::{ClientPacket, ConnectionType, ProcessUnderTestPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
 static PROCESS_UNDER_TEST_PACKET_QUEUE: SegQueue<ProcessUnderTestPacket> = SegQueue::new();
-
-use crate::component_def::{Build, Listener, Measurement, StartProcess};
 
 pub struct ListenerImplem {
     pub ip: String,
