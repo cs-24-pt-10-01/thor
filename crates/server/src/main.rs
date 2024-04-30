@@ -1,23 +1,16 @@
+use crate::{
+    build::GitBuild, component_def::Listener, listener::ListenerImplem, measurement::RaplSampler,
+    start_process::StartImplem,
+};
+use config::Config;
+use std::{fs, sync::Arc, thread::sleep};
+
 mod build;
 mod component_def;
 mod config;
 mod listener;
 mod measurement;
 mod start_process;
-
-// definitions of components
-use crate::component_def::Listener;
-
-// implementations of components
-use crate::build::GitBuild;
-use crate::listener::ListenerImplem;
-use crate::measurement::RaplSampler;
-use crate::start_process::StartImplem;
-
-use std::thread::sleep;
-
-use config::*;
-use std::{fs, sync::Arc};
 
 fn main() {
     //getting config

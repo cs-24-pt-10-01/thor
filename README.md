@@ -7,8 +7,6 @@
 
 Thor is a framework for collecting energy measurements from executed code in processes.
 
-This repository is a continuation of [rapl-interface](https://github.com/cs-23-pt-9-01/rapl-interface).
-
 ## Structure
 
 The repository contains the following essential crates:
@@ -20,7 +18,7 @@ The repository contains the following essential crates:
 
 These crates are intended for experiments and testing:
 
-- Minimal-client*: Experiments
+- mvp: A "minimum viable product", capable of measuring energy consumption of functions in a process. It converts the measurements to joules and writes them to a CSV file. This crate can be considered a continuation of the implementation of [rapl-interface](https://github.com/cs-23-pt-9-01/rapl-interface).
 - test-client: A testing client for the Thor server
 
 ## Installation
@@ -45,8 +43,26 @@ cargo build --release
 
 Thor must run under root privileges to access the RAPL interface.
 
-To run the Thor server, execute:
+### Linux
+
+Ensure that MSR registers are enabled by running:
+
+```bash
+sudo modprobe msr
+```
+
+Then, run the Thor server on Linux by executing the following command in the main directory:
 
 ```bash
 sudo ./target/release/thor-server
+```
+
+### Windows
+
+The Windows implementation makes use of the LibreHardwareMonitor's driver for accessing MSR registers. This program must be installed and running before starting the Thor server. It can be downloaded from [here](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
+
+After installing the driver, start the Thor server by running the following command in Windows Terminal as an administrator in the main directory:
+
+```bash
+.\target\release\thor-server.exe
 ```
