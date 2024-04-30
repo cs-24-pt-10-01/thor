@@ -99,7 +99,6 @@ static RAPL_POWER_UNITS: OnceCell<u64> = OnceCell::new();
 #[cfg(intel)]
 static RAPL_POWER_UNITS: OnceCell<u64> = OnceCell::new();
 
-static POWER_UNITS_STRUCT: OnceCell<IntelRaplPowerUnits> = OnceCell::new();
 /// Read the RAPL MSR registers. This gets all the registers except for the power unit.
 pub fn read_rapl_msr_registers() -> RaplMeasurement {
     RAPL_INIT.call_once(|| {
