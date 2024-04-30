@@ -49,7 +49,7 @@ To run the Thor server on Linux, execute:
 sudo ./target/release/thor-server
 ```
 
-For Windows, execute the following command in PowerShell as an administrator:
+For Windows, execute the following command in Windows Terminal as an administrator:
 
 ```bash
 .\target\release\thor-server.exe
