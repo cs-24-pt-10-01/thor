@@ -1,6 +1,5 @@
-use std::io;
-
 use anyhow::Result;
+use std::io;
 
 pub trait Measurement<T> {
     // T is the type of measurement
