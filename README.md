@@ -20,7 +20,6 @@ The repository contains the following essential crates:
 
 These crates are intended for experiments and testing:
 
-- Minimal-client*: Experiments
 - test-client: A testing client for the Thor server
 
 ## Installation
