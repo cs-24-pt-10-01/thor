@@ -81,17 +81,17 @@ impl RaplSampler {
         while let Some((measurement, time)) = SAMPLING_THREAD_DATA.pop() {
             // finding overflows, by matching cpu type and checking pkg
             match measurement {
-                RaplMeasurement::Intel(ref measurement_clone) => {
-                    if self.last_pkg > measurement_clone.pkg {
+                RaplMeasurement::Intel(ref intel_rapl_registers) => {
+                    if self.last_pkg > intel_rapl_registers.pkg {
                         self.pkg_overflow += 1;
                     }
-                    self.last_pkg = measurement_clone.pkg;
+                    self.last_pkg = intel_rapl_registers.pkg;
                 }
-                RaplMeasurement::AMD(ref measurement_clone) => {
-                    if self.last_pkg > measurement_clone.pkg {
+                RaplMeasurement::AMD(ref amd_rapl_registers) => {
+                    if self.last_pkg > amd_rapl_registers.pkg {
                         self.pkg_overflow += 1;
                     }
-                    self.last_pkg = measurement_clone.pkg;
+                    self.last_pkg = amd_rapl_registers.pkg;
                 }
             }
 
