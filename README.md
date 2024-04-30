@@ -43,13 +43,25 @@ cargo build --release
 
 Thor must run under root privileges to access the RAPL interface.
 
-To run the Thor server on Linux, execute:
+### Linux
+
+Ensure that MSR registers are enabled by running:
+
+```bash
+sudo modprobe msr
+```
+
+Then, run the Thor server on Linux by executing the following command:
 
 ```bash
 sudo ./target/release/thor-server
 ```
 
-For Windows, execute the following command in Windows Terminal as an administrator:
+### Windows
+
+The Windows implementation makes use of the LibreHardwareMonitor's driver for accessing MSR registers. This program must be installed and running before starting the Thor server. It can be downloaded from [here](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor).
+
+After installing the driver, start the Thor server by running the following command in Windows Terminal as an administrator:
 
 ```bash
 .\target\release\thor-server.exe
