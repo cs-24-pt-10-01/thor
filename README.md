@@ -7,7 +7,7 @@
 
 Thor is a framework for collecting energy measurements from executed code in processes.
 
-This repository is a continuation of [rapl-interface](https://github.com/cs-23-pt-9-01/rapl-interface).
+This repository can be considered a continuation of [rapl-interface](https://github.com/cs-23-pt-9-01/rapl-interface).
 
 ## Structure
 
