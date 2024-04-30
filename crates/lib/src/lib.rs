@@ -193,16 +193,6 @@ fn get_energy_unit() -> f64 {
         read_msr(MSR_RAPL_POWER_UNIT).expect("failed to read RAPL power unit"),
     );
 
-    println!("full bits: {:?}", power_unit.into_bits());
-    println!(
-        "energy status units: {:?}",
-        power_unit.energy_status_units()
-    );
-    println!(
-        "Energy unit: {:?}",
-        0.5f64.powi(power_unit.energy_status_units() as i32)
-    );
-
     // do mod pow 0.5 ^ joule_unit
     0.5f64.powi(power_unit.energy_status_units() as i32)
 }
