@@ -6,18 +6,22 @@ use std::{
     thread,
     time::{Duration, SystemTime},
 };
-use thor_lib::{read_rapl_msr_registers, RaplMeasurement};
+use thor_lib::{
+    convert_to_joules, read_rapl_msr_registers, RaplMeasurement, RaplMeasurementJoules,
+};
 
 static SAMPLING_THREAD_DATA: SegQueue<(RaplMeasurement, u128)> = SegQueue::new();
 
 pub struct RaplSampler {
     pub max_sample_age: u128,
-    range_map: RangeMap<u128, RaplMeasurement>,
+    range_map: RangeMap<u128, (RaplMeasurement, u32)>,
     sampling_interval: u64,
+    pkg_overflow: u32,
+    last_pkg: u64,
 }
 
-impl Measurement<RaplMeasurement> for RaplSampler {
-    fn get_measurement(&mut self, timestamp: u128) -> RaplMeasurement {
+impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
+    fn get_measurement(&mut self, timestamp: u128) -> (RaplMeasurementJoules, u32) {
         self.update_range_map(timestamp);
 
         let result = self
@@ -25,10 +29,14 @@ impl Measurement<RaplMeasurement> for RaplSampler {
             .get(&timestamp)
             .expect("No measurement found");
 
-        result.clone()
+        // converting to joules
+        (convert_to_joules(result.0.clone()), result.1)
     }
 
-    fn get_multiple_measurements(&mut self, timestamps: &Vec<u128>) -> Vec<&RaplMeasurement> {
+    fn get_multiple_measurements(
+        &mut self,
+        timestamps: &Vec<u128>,
+    ) -> Vec<(RaplMeasurementJoules, u32)> {
         let mut result = Vec::new();
 
         // updating rangemap using the first timestamp
@@ -37,7 +45,11 @@ impl Measurement<RaplMeasurement> for RaplSampler {
         // find measurements
         for timestamp in timestamps {
             let measurement = self.range_map.get(timestamp).expect("No measurement found");
-            result.push(measurement);
+            // converting to joules
+            result.push((
+                convert_to_joules(measurement.0.clone()),
+                measurement.1.clone(),
+            ));
         }
 
         result
@@ -50,6 +62,8 @@ impl RaplSampler {
             max_sample_age,
             range_map: RangeMap::new(),
             sampling_interval,
+            pkg_overflow: 0,
+            last_pkg: 0,
         };
         result.start_sampling(sampling_interval).unwrap();
         result
@@ -65,8 +79,26 @@ impl RaplSampler {
     fn update_range_map(&mut self, timestamp: u128) {
         // add new measurements
         while let Some((measurement, time)) = SAMPLING_THREAD_DATA.pop() {
-            self.range_map
-                .insert(time..time + self.sampling_interval as u128, measurement);
+            // finding overflows, by matching cpu type and checking pkg
+            match measurement {
+                RaplMeasurement::Intel(ref intel_rapl_registers) => {
+                    if self.last_pkg > intel_rapl_registers.pkg {
+                        self.pkg_overflow += 1;
+                    }
+                    self.last_pkg = intel_rapl_registers.pkg;
+                }
+                RaplMeasurement::AMD(ref amd_rapl_registers) => {
+                    if self.last_pkg > amd_rapl_registers.pkg {
+                        self.pkg_overflow += 1;
+                    }
+                    self.last_pkg = amd_rapl_registers.pkg;
+                }
+            }
+
+            self.range_map.insert(
+                time..time + self.sampling_interval as u128,
+                (measurement, self.pkg_overflow),
+            );
         }
 
         //remove old measurements

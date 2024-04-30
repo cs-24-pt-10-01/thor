@@ -13,7 +13,7 @@ use std::{
     thread,
     time::{Duration, SystemTime},
 };
-use thor_lib::RaplMeasurement;
+use thor_lib::RaplMeasurementJoules;
 use thor_shared::{ClientPacket, ConnectionType, ProcessUnderTestPacket};
 use tokio::{io::AsyncReadExt, net::TcpListener};
 
@@ -33,8 +33,8 @@ const MAX_REPO_SIZE: usize = 1024;
 // Delimiter for the send measurements to the clients
 const MEASUREMENTS_DELIMITER: &[u8] = "end".as_bytes();
 
-impl Listener<RaplMeasurement> for ListenerImplem {
-    fn start_listening<S: StartProcess, B: Build, M: Measurement<RaplMeasurement>>(
+impl Listener<(RaplMeasurementJoules, u32)> for ListenerImplem {
+    fn start_listening<S: StartProcess, B: Build, M: Measurement<(RaplMeasurementJoules, u32)>>(
         &self,
         start_process: S,
         builder: B,
@@ -176,7 +176,7 @@ async fn handle_client_connection(
     });
 }
 
-fn send_packet_to_clients<M: Measurement<RaplMeasurement>>(
+fn send_packet_to_clients<M: Measurement<(RaplMeasurementJoules, u32)>>(
     client_connections: Arc<Mutex<Vec<std::net::TcpStream>>>,
     client_packet_queue_cycle: u64,
     measurement: &mut M,
@@ -259,7 +259,7 @@ fn send_packet(
     conn.write_all(MEASUREMENTS_DELIMITER)
 }
 
-fn create_client_packets<M: Measurement<RaplMeasurement>>(
+fn create_client_packets<M: Measurement<(RaplMeasurementJoules, u32)>>(
     mut process_under_test_packets: VecDeque<ProcessUnderTestPacket>,
     measurement: &mut M,
     client_packets: &mut Vec<ClientPacket>,
@@ -272,11 +272,11 @@ fn create_client_packets<M: Measurement<RaplMeasurement>>(
 
     // handling multiple packets at a time
     for x in 0..process_under_test_packets.len() {
-        let rapl_measurement = measurements[x].clone();
         let process_under_test_packet = process_under_test_packets.pop_front().unwrap();
         let client_packet = ClientPacket {
             process_under_test_packet,
-            rapl_measurement,
+            rapl_measurement: measurements[x].0.clone(),
+            pkg_overflow: measurements[x].1,
         };
         client_packets.push(client_packet);
     }
