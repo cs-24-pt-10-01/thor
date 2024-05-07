@@ -74,7 +74,7 @@ struct IntelRaplPowerUnits {
     #[bits(4)]
     reserved_1: usize,
 
-    #[bits(4)]
+    #[bits(5)]
     energy_status_units: usize,
 
     #[bits(3)]
@@ -83,7 +83,7 @@ struct IntelRaplPowerUnits {
     #[bits(4)]
     time_units: usize,
 
-    #[bits(45)]
+    #[bits(44)]
     reserved_3: u64,
 }
 
@@ -175,6 +175,48 @@ pub fn read_rapl_msr_power_unit() -> u64 {
     );
 
     power_unit.into_bits()
+}
+
+static ENERGY_UNITS: OnceCell<f64> = OnceCell::new();
+
+fn get_energy_unit() -> f64 {
+    #[cfg(amd)]
+    use crate::amd::MSR_RAPL_POWER_UNIT;
+    #[cfg(intel)]
+    use crate::intel::MSR_RAPL_POWER_UNIT;
+
+    let power_unit = IntelRaplPowerUnits::from_bits(
+        read_msr(MSR_RAPL_POWER_UNIT).expect("failed to read RAPL power unit"),
+    );
+
+    // do mod pow 0.5 ^ joule_unit
+    0.5f64.powi(power_unit.energy_status_units() as i32)
+}
+
+pub fn convert_to_joules(measurement: RaplMeasurement) -> RaplMeasurementJoules {
+    let energy_units = *ENERGY_UNITS.get_or_init(get_energy_unit);
+
+    match measurement {
+        RaplMeasurement::Intel(registers) => {
+            let pp0 = registers.pp0 as f64 * energy_units;
+            let pp1 = registers.pp1 as f64 * energy_units;
+            let pkg = registers.pkg as f64 * energy_units;
+            let dram = registers.dram as f64 * energy_units;
+
+            RaplMeasurementJoules::Intel(IntelRaplRegistersJoules {
+                pp0,
+                pp1,
+                pkg,
+                dram,
+            })
+        }
+        RaplMeasurement::AMD(registers) => {
+            let core = registers.core as f64 * energy_units;
+            let pkg = registers.pkg as f64 * energy_units;
+
+            RaplMeasurementJoules::AMD(AmdRaplRegistersJoules { core, pkg })
+        }
+    }
 }
 
 #[cfg(amd)]

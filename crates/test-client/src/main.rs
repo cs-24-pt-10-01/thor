@@ -4,7 +4,7 @@ use std::{
     error::Error,
     fs::{self, OpenOptions},
 };
-use thor_lib::RaplMeasurement::{Intel, AMD};
+use thor_lib::RaplMeasurementJoules::{Intel, AMD};
 use thor_shared::{ClientPacket, ConnectionType};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},

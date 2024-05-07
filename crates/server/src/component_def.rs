@@ -6,7 +6,7 @@ pub trait Measurement<T> {
     fn get_measurement(&mut self, timestamp: u128) -> T;
 
     // for matching multiple measurements at a time
-    fn get_multiple_measurements(&mut self, timestamps: &Vec<u128>) -> Vec<&T>;
+    fn get_multiple_measurements(&mut self, timestamps: &Vec<u128>) -> Vec<T>;
 }
 
 pub trait Build {
