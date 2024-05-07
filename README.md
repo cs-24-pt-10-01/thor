@@ -5,7 +5,7 @@
   Thor
 </h1>
 
-Thor is a framework for collecting energy measurements from executed code in processes.
+Thor is a tool for collecting energy measurements of executed functions in running programs.
 
 ## Structure
 
