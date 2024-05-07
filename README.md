@@ -9,17 +9,12 @@ Thor is a tool for collecting energy measurements of executed functions in runni
 
 ## Structure
 
-The repository contains the following essential crates:
+The repository contains the following crates:
 
 - lib: A library for taking measurements with RAPL
 - shared-lib-sync: A static library used by the processes under test, which utilizes synchronous locking
 - server: The Thor server
 - shared: Shared logic
-
-These crates are intended for experiments and testing:
-
-- mvp: A "minimum viable product", capable of measuring energy consumption of functions in a process. It converts the measurements to joules and writes them to a CSV file. This crate can be considered a continuation of the implementation of [rapl-interface](https://github.com/cs-23-pt-9-01/rapl-interface)
-- test-client: A testing client for the Thor server
 
 ## Installation
 
