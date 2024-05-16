@@ -121,7 +121,7 @@ fn rapl_sampling_thread(sampling_interval: u64) {
     loop {
         // Grab the RAPL data and the timestamp, then push it to the queue
         let rapl_measurement = read_rapl_msr_registers();
-        let timestamp = get_timestamp_millis();
+        let timestamp = get_timestamp();
 
         SAMPLING_THREAD_DATA.push((rapl_measurement, timestamp));
 
@@ -130,7 +130,7 @@ fn rapl_sampling_thread(sampling_interval: u64) {
     }
 }
 
-fn get_timestamp_millis() -> u128 {
+fn get_timestamp() -> u128 {
     SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
