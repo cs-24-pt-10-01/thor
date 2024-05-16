@@ -22,10 +22,10 @@ pub struct RaplSampler {
 
 impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
     fn get_measurement(&mut self, timestamp: u128) -> (RaplMeasurementJoules, u32) {
-        self.update_range_map(timestamp);
-
         // convert timestamp from nanoseconds to milliseconds
         let timestamp_millis = timestamp / 1_000_000;
+
+        self.update_range_map(timestamp_millis);
 
         let result = self
             .range_map
@@ -42,18 +42,21 @@ impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
     ) -> Vec<(RaplMeasurementJoules, u32)> {
         let mut result = Vec::new();
 
+        let timestamp_millis = timestamps[0] / 1_000_000;
+
         // updating rangemap using the first timestamp
-        self.update_range_map(timestamps[0]);
+        self.update_range_map(timestamp_millis);
 
         // find measurements
         for timestamp in timestamps {
             // convert timestamp from nanoseconds to milliseconds
-            let timestmap_millis = timestamp / 1_000_000;
+            let timestamp_millis = timestamp / 1_000_000;
 
             let measurement = self
                 .range_map
-                .get(&timestmap_millis)
+                .get(&timestamp_millis)
                 .expect("No measurement found");
+
             // converting to joules
             result.push((
                 convert_to_joules(measurement.0.clone()),
