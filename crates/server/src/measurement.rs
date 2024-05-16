@@ -24,9 +24,12 @@ impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
     fn get_measurement(&mut self, timestamp: u128) -> (RaplMeasurementJoules, u32) {
         self.update_range_map(timestamp);
 
+        // convert timestamp from nanoseconds to milliseconds
+        let timestamp_millis = timestamp / 1_000_000;
+
         let result = self
             .range_map
-            .get(&timestamp)
+            .get(&timestamp_millis)
             .expect("No measurement found");
 
         // converting to joules
@@ -44,7 +47,13 @@ impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
 
         // find measurements
         for timestamp in timestamps {
-            let measurement = self.range_map.get(timestamp).expect("No measurement found");
+            // convert timestamp from nanoseconds to milliseconds
+            let timestmap_millis = timestamp / 1_000_000;
+
+            let measurement = self
+                .range_map
+                .get(&timestmap_millis)
+                .expect("No measurement found");
             // converting to joules
             result.push((
                 convert_to_joules(measurement.0.clone()),
@@ -126,50 +135,3 @@ fn get_timestamp_millis() -> u128 {
         .unwrap()
         .as_millis()
 }
-
-// TODO: Consider handling for process usage
-
-// Create a system and refresh it
-// TODO: Maybe move this into the main function initially,
-// and then pass it to this function, to prevent receiving packets before it is ready
-/*let mut sys = System::new_all();
-sys.refresh_all();
-
-thread::sleep(Duration::from_secs(5));
-//std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
-
-for i in 0..5 {
-    sys.refresh_processes_specifics(ProcessRefreshKind::everything().with_cpu());
-
-    // Print all proceeses and their CPU usage
-    for (pid, process) in sys.processes() {
-        if process.cpu_usage() > 0.0 {
-            println!(
-                "Iteration: {}, name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
-                i,
-                process.name(),
-                process.exe(),
-                process.pid(),
-                process.cpu_usage(),
-                process.memory(),
-                process.status(),
-            );
-        }
-    }
-
-    // Print status of the WoW Classic process
-    for process in sys.processes_by_exact_name("WowClassic.exe") {
-        println!(
-            "WoW Classic process: name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
-            process.name(),
-            process.exe(),
-            process.pid(),
-            process.cpu_usage(),
-            process.memory(),
-            process.status(),
-        );
-    }
-
-    // Sleep for the minimum CPU update interval
-    thread::sleep(Duration::from_secs(10));
-}*/

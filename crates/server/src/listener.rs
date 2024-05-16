@@ -211,7 +211,7 @@ fn send_packet_to_clients<M: Measurement<(RaplMeasurementJoules, u32)>>(
                 SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
-                    .as_millis(),
+                    .as_nanos(),
             );
         } else {
             // Create client packets

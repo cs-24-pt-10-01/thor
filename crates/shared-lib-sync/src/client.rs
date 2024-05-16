@@ -20,7 +20,7 @@ pub fn start_rapl(id: impl AsRef<str>) {
         timestamp: SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
-            .as_millis(),
+            .as_nanos(),
     };
 
     send_packet(packet);
@@ -35,7 +35,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
         timestamp: SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
-            .as_millis(),
+            .as_nanos(),
     };
 
     send_packet(packet);
