@@ -110,7 +110,7 @@ impl RaplSampler {
             );
         }
 
-        //remove old measurements
+        //remove old measurements (max_sample_age is in milliseconds, so converting to nanoseconds)
         self.range_map
             .remove(0..timestamp - self.max_sample_age * 1_000_000);
     }
