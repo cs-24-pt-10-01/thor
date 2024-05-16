@@ -105,12 +105,12 @@ impl RaplSampler {
             }
 
             self.range_map.insert(
-                time..time + (self.sampling_interval * 1000 + 1_000_000) as u128, // TODO Millis is added with a number in microseconds
+                time..time + (self.sampling_interval * 1000 + 1_000_000) as u128,
                 (measurement, self.pkg_overflow),
             );
         }
 
-        //remove old measurements (max_sample_age is in milliseconds, so converting to nanoseconds)
+        //remove old measurements (max_sample_age is in milliseconds, converting to nanoseconds)
         self.range_map
             .remove(0..timestamp - self.max_sample_age * 1_000_000);
     }
