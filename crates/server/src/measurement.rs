@@ -22,14 +22,16 @@ pub struct RaplSampler {
 
 impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
     fn get_measurement(&mut self, timestamp: u128) -> (RaplMeasurementJoules, u32) {
-        // convert timestamp from nanoseconds to milliseconds
-        let timestamp_millis = timestamp / 1_000_000;
+        println!("rello");
+        for (key, value) in self.range_map.iter() {
+            println!("{:?}: {:?}", key, value);
+        }
 
-        self.update_range_map(timestamp_millis);
+        self.update_range_map(timestamp);
 
         let result = self
             .range_map
-            .get(&timestamp_millis)
+            .get(&timestamp)
             .expect("No measurement found");
 
         // converting to joules
@@ -42,19 +44,14 @@ impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
     ) -> Vec<(RaplMeasurementJoules, u32)> {
         let mut result = Vec::new();
 
-        let timestamp_millis = timestamps[0] / 1_000_000;
-
         // updating rangemap using the first timestamp
-        self.update_range_map(timestamp_millis);
+        self.update_range_map(timestamps[0]);
 
         // find measurements
         for timestamp in timestamps {
-            // convert timestamp from nanoseconds to milliseconds
-            let timestamp_millis = timestamp / 1_000_000;
-
             let measurement = self
                 .range_map
-                .get(&timestamp_millis)
+                .get(&timestamp)
                 .expect("No measurement found");
 
             // converting to joules
@@ -108,13 +105,14 @@ impl RaplSampler {
             }
 
             self.range_map.insert(
-                time..time + self.sampling_interval as u128,
+                time..time + (self.sampling_interval * 1000 + 1_000_000) as u128, // TODO Millis is added with a number in microseconds
                 (measurement, self.pkg_overflow),
             );
         }
 
         //remove old measurements
-        self.range_map.remove(0..timestamp - self.max_sample_age);
+        self.range_map
+            .remove(0..timestamp - self.max_sample_age * 1_000_000);
     }
 }
 
@@ -136,5 +134,5 @@ fn get_timestamp_millis() -> u128 {
     SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
-        .as_millis()
+        .as_nanos()
 }
