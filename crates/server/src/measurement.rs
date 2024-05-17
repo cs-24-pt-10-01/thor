@@ -108,7 +108,7 @@ impl RaplSampler {
             }
 
             self.range_map.insert(
-                time..time + (self.sampling_interval * 1000 + 1_000_000_000) as u128, // TODO this is a lot
+                time..time + (self.sampling_interval * 1000 + 20_000_000) as u128, // TODO Added 20 ms to account for delay, this is a lot
                 (measurement, self.pkg_overflow),
             );
         }
