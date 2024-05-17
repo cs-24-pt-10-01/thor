@@ -22,17 +22,16 @@ pub struct RaplSampler {
 
 impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
     fn get_measurement(&mut self, timestamp: u128) -> (RaplMeasurementJoules, u32) {
-        println!("rello");
-        for (key, value) in self.range_map.iter() {
-            println!("{:?}: {:?}", key, value);
-        }
-
         self.update_range_map(timestamp);
 
-        let result = self
-            .range_map
-            .get(&timestamp)
-            .expect("No measurement found");
+        let result = self.range_map.get(&timestamp).expect(
+            format!(
+                "No measurement found for timestamp: {}, max: {:?}",
+                timestamp,
+                self.range_map.last_range_value()
+            )
+            .as_str(),
+        );
 
         // converting to joules
         (convert_to_joules(result.0.clone()), result.1)
@@ -49,10 +48,14 @@ impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
 
         // find measurements
         for timestamp in timestamps {
-            let measurement = self
-                .range_map
-                .get(&timestamp)
-                .expect("No measurement found");
+            let measurement = self.range_map.get(&timestamp).expect(
+                format!(
+                    "No measurement found for timestamp: {}, max: {:?}",
+                    timestamp,
+                    self.range_map.last_range_value()
+                )
+                .as_str(),
+            );
 
             // converting to joules
             result.push((
@@ -105,14 +108,14 @@ impl RaplSampler {
             }
 
             self.range_map.insert(
-                time..time + (self.sampling_interval * 1000 + 1_000_000) as u128,
+                time..time + (self.sampling_interval * 1000 + 1_000_000_000) as u128, // TODO this is a lot
                 (measurement, self.pkg_overflow),
             );
         }
 
         //remove old measurements (max_sample_age is in milliseconds, converting to nanoseconds)
         self.range_map
-            .remove(0..timestamp - self.max_sample_age * 1_000_000);
+            .remove(0..timestamp - (self.max_sample_age * 1_000_000));
     }
 }
 
