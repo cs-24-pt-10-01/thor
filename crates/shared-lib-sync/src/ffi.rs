@@ -5,8 +5,8 @@ use std::ffi::{c_char, CStr};
 //
 // This function is unsafe because it dereferences the `id` pointer.
 #[no_mangle]
-pub unsafe extern "C" fn start_rapl(id: *const c_char) {
-    let id_cstr = CStr::from_ptr(id);
+pub extern "C" fn start_rapl(id: *const c_char) {
+    let id_cstr = unsafe { CStr::from_ptr(id) };
     let id_string = String::from_utf8_lossy(id_cstr.to_bytes()).to_string();
 
     client::start_rapl(id_string);
@@ -16,8 +16,8 @@ pub unsafe extern "C" fn start_rapl(id: *const c_char) {
 //
 // This function is unsafe because it dereferences the `id` pointer.
 #[no_mangle]
-pub unsafe extern "C" fn stop_rapl(id: *const c_char) {
-    let id_cstr = CStr::from_ptr(id);
+pub extern "C" fn stop_rapl(id: *const c_char) {
+    let id_cstr = unsafe { CStr::from_ptr(id) };
     let id_string = String::from_utf8_lossy(id_cstr.to_bytes()).to_string();
 
     client::stop_rapl(id_string);
