@@ -16,9 +16,6 @@ use self::os_linux::{rapl_init, read_msr};
 #[cfg(target_os = "windows")]
 use self::os_windows::{rapl_init, read_msr};
 
-mod amdd;
-mod intell;
-
 #[derive(Error, Debug)]
 pub enum RaplError {
     #[error("io error")]
