@@ -53,6 +53,19 @@ fn main() {
         timestamp: 0,
     });
 
+    // In hex bytes
+    println!(
+        "{:02X?}",
+        bincode::serialize(&ProcessUnderTestPacket {
+            id: "Id".to_string(),
+            process_id: 0,
+            thread_id: 0,
+            operation: ProcessUnderTestPacketOperation::Start,
+            timestamp: 0,
+        })
+        .unwrap()
+    );
+
     let client_packet = ClientPacket {
         process_under_test_packet: ProcessUnderTestPacket {
             id: "".to_string(),
