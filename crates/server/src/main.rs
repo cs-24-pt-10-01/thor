@@ -72,9 +72,19 @@ fn main() {
     serde_json::to_vec(&client_packet).unwrap();
     print_client_packet_len(&client_packet);
 
+    println!(
+        "CLIENTPACKET DATA: {:?}",
+        serde_json::to_string(&client_packet).unwrap()
+    );
+
     let mut client_packets = Vec::new();
     client_packets.push(client_packet);
     print_client_packets_len(&client_packets);
+
+    println!(
+        "CLIENTPACKETS DATA: {:?}",
+        serde_json::to_string(&client_packets).unwrap()
+    );
 
     let client_packet2 = ClientPacket {
         process_under_test_packet: ProcessUnderTestPacket {
