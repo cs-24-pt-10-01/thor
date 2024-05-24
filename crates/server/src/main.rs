@@ -58,10 +58,10 @@ fn main() {
         "{:02X?}",
         bincode::serialize(&ProcessUnderTestPacket {
             id: "Id".to_string(),
-            process_id: 0,
-            thread_id: 0,
+            process_id: 123,
+            thread_id: 456,
             operation: ProcessUnderTestPacketOperation::Start,
-            timestamp: 0,
+            timestamp: 789,
         })
         .unwrap()
     );
