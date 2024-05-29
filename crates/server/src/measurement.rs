@@ -24,10 +24,14 @@ impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
     fn get_measurement(&mut self, timestamp: u128) -> (RaplMeasurementJoules, u32) {
         self.update_range_map(timestamp);
 
-        let result = self
-            .range_map
-            .get(&timestamp)
-            .expect("No measurement found");
+        let result = self.range_map.get(&timestamp).expect(
+            format!(
+                "No measurement found for timestamp: {}, max: {:?}",
+                timestamp,
+                self.range_map.last_range_value()
+            )
+            .as_str(),
+        );
 
         // converting to joules
         (convert_to_joules(result.0.clone()), result.1)
@@ -44,7 +48,15 @@ impl Measurement<(RaplMeasurementJoules, u32)> for RaplSampler {
 
         // find measurements
         for timestamp in timestamps {
-            let measurement = self.range_map.get(timestamp).expect("No measurement found");
+            let measurement = self.range_map.get(&timestamp).expect(
+                format!(
+                    "No measurement found for timestamp: {}, max: {:?}",
+                    timestamp,
+                    self.range_map.last_range_value()
+                )
+                .as_str(),
+            );
+
             // converting to joules
             result.push((
                 convert_to_joules(measurement.0.clone()),
@@ -96,13 +108,14 @@ impl RaplSampler {
             }
 
             self.range_map.insert(
-                time..time + self.sampling_interval as u128,
+                time..time + (self.sampling_interval * 1000 + 20_000_000) as u128, //Added 20 ms to account for possible delay
                 (measurement, self.pkg_overflow),
             );
         }
 
-        //remove old measurements
-        self.range_map.remove(0..timestamp - self.max_sample_age);
+        //remove old measurements (max_sample_age is in milliseconds, converting to nanoseconds)
+        self.range_map
+            .remove(0..timestamp - (self.max_sample_age * 1_000_000));
     }
 }
 
@@ -111,7 +124,7 @@ fn rapl_sampling_thread(sampling_interval: u64) {
     loop {
         // Grab the RAPL data and the timestamp, then push it to the queue
         let rapl_measurement = read_rapl_msr_registers();
-        let timestamp = get_timestamp_millis();
+        let timestamp = get_timestamp();
 
         SAMPLING_THREAD_DATA.push((rapl_measurement, timestamp));
 
@@ -120,56 +133,9 @@ fn rapl_sampling_thread(sampling_interval: u64) {
     }
 }
 
-fn get_timestamp_millis() -> u128 {
+fn get_timestamp() -> u128 {
     SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
-        .as_millis()
+        .as_nanos()
 }
-
-// TODO: Consider handling for process usage
-
-// Create a system and refresh it
-// TODO: Maybe move this into the main function initially,
-// and then pass it to this function, to prevent receiving packets before it is ready
-/*let mut sys = System::new_all();
-sys.refresh_all();
-
-thread::sleep(Duration::from_secs(5));
-//std::thread::sleep(MINIMUM_CPU_UPDATE_INTERVAL);
-
-for i in 0..5 {
-    sys.refresh_processes_specifics(ProcessRefreshKind::everything().with_cpu());
-
-    // Print all proceeses and their CPU usage
-    for (pid, process) in sys.processes() {
-        if process.cpu_usage() > 0.0 {
-            println!(
-                "Iteration: {}, name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
-                i,
-                process.name(),
-                process.exe(),
-                process.pid(),
-                process.cpu_usage(),
-                process.memory(),
-                process.status(),
-            );
-        }
-    }
-
-    // Print status of the WoW Classic process
-    for process in sys.processes_by_exact_name("WowClassic.exe") {
-        println!(
-            "WoW Classic process: name: {}, exe: {:?}, pid: {}, cpu usage: {:?}, memory: {}, status: {:?}",
-            process.name(),
-            process.exe(),
-            process.pid(),
-            process.cpu_usage(),
-            process.memory(),
-            process.status(),
-        );
-    }
-
-    // Sleep for the minimum CPU update interval
-    thread::sleep(Duration::from_secs(10));
-}*/

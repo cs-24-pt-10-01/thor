@@ -211,7 +211,7 @@ fn send_packet_to_clients<M: Measurement<(RaplMeasurementJoules, u32)>>(
                 SystemTime::now()
                     .duration_since(SystemTime::UNIX_EPOCH)
                     .unwrap()
-                    .as_millis(),
+                    .as_nanos(),
             );
         } else {
             // Create client packets
@@ -226,7 +226,15 @@ fn send_packet_to_clients<M: Measurement<(RaplMeasurementJoules, u32)>>(
 
                     // blocks if the packets is over 1 Kb
                     if serialized_packet.len() > 1000 {
-                        conn.set_nonblocking(false).unwrap();
+                        match conn.set_nonblocking(false) {
+                            Ok(_) => {}
+                            Err(err) => {
+                                // Can not send to client, remove the connection
+                                println!("Could not set blocking mode, removing connection, Error: {:?}", err);
+                                conn.shutdown(Shutdown::Both).unwrap();
+                                return false;
+                            }
+                        }
                     }
                     // sending packets
                     match send_packet(conn, &serialized_packet) {
