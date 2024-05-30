@@ -11,6 +11,8 @@ static STREAM_INIT: Once = Once::new();
 
 static CONNECTION: Mutex<Option<TcpStream>> = Mutex::new(None);
 
+const ADDRESS: &str = "127.0.0.1:6969";
+
 pub fn start_rapl(id: impl AsRef<str>) {
     let packet = ProcessUnderTestPacket {
         id: id.as_ref().to_string(),
@@ -44,7 +46,7 @@ pub fn stop_rapl(id: impl AsRef<str>) {
 fn send_packet(packet: ProcessUnderTestPacket) {
     STREAM_INIT.call_once(|| {
         // making connection
-        let mut connection = TcpStream::connect("127.0.0.1:6969").unwrap();
+        let mut connection = TcpStream::connect(ADDRESS).unwrap();
 
         // indicating that this is a process under test process
         connection
