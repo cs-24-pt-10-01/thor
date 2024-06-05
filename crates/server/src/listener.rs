@@ -4,7 +4,6 @@ use crate::{
 };
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
-use serde_json;
 use std::{
     collections::VecDeque,
     io::Write,
