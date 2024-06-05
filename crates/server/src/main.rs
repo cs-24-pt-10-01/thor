@@ -1,6 +1,5 @@
 use crate::{
     build::GitBuild, component_def::Listener, listener::ListenerImplem, measurement::RaplSampler,
-    start_process::StartImplem,
 };
 use config::Config;
 use std::{fs, sync::Arc, thread::sleep};
@@ -10,7 +9,6 @@ mod component_def;
 mod config;
 mod listener;
 mod measurement;
-mod start_process;
 
 fn main() {
     //getting config
@@ -18,8 +16,6 @@ fn main() {
         fs::read_to_string("thor-server.toml").expect("Failed to read thor-server.toml");
     let config: Arc<Config> =
         Arc::new(toml::from_str(&config_file_data).expect("Failed to parse config"));
-
-    let start = StartImplem {};
 
     let build = GitBuild {};
 
@@ -35,5 +31,5 @@ fn main() {
         ip: config.thor.server_ip.clone(),
         client_packet_queue_cycle: config.thor.client_packet_queue_cycle_millis,
     };
-    listen.start_listening(start, build, &mut measure).unwrap();
+    listen.start_listening(build, &mut measure).unwrap();
 }
