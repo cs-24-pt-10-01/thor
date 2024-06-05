@@ -14,9 +14,5 @@ pub trait Build {
 }
 
 pub trait Listener<T> {
-    fn start_listening<B: Build, M: Measurement<T>>(
-        &self,
-        builder: B,
-        measurement: &mut M,
-    ) -> Result<()>;
+    fn start_listening<M: Measurement<T>>(&self, measurement: &mut M) -> Result<()>;
 }

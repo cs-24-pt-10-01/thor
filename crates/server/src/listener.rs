@@ -34,9 +34,8 @@ const MAX_REPO_SIZE: usize = 1024;
 const MEASUREMENTS_DELIMITER: &[u8] = "end".as_bytes();
 
 impl Listener<(RaplMeasurementJoules, u32)> for ListenerImplem {
-    fn start_listening<B: Build, M: Measurement<(RaplMeasurementJoules, u32)>>(
+    fn start_listening<M: Measurement<(RaplMeasurementJoules, u32)>>(
         &self,
-        builder: B,
         measurement: &mut M,
     ) -> Result<()> {
         // Creating vector of streams
