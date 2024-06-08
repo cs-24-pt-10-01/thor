@@ -1,2 +1,2 @@
-mod client;
 pub mod ffi;
+mod library;
