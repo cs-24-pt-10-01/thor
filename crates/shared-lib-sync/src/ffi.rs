@@ -1,4 +1,4 @@
-use crate::client;
+use crate::library;
 use std::ffi::{c_char, CStr};
 
 /// # Safety
@@ -9,7 +9,7 @@ pub unsafe extern "C" fn start_rapl(id: *const c_char) {
     let id_cstr = CStr::from_ptr(id);
     let id_string = String::from_utf8_lossy(id_cstr.to_bytes()).to_string();
 
-    client::start_rapl(id_string);
+    library::start_rapl(id_string);
 }
 
 /// # Safety
@@ -20,5 +20,5 @@ pub unsafe extern "C" fn stop_rapl(id: *const c_char) {
     let id_cstr = CStr::from_ptr(id);
     let id_string = String::from_utf8_lossy(id_cstr.to_bytes()).to_string();
 
-    client::stop_rapl(id_string);
+    library::stop_rapl(id_string);
 }
