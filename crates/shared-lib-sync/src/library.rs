@@ -11,7 +11,7 @@ static STREAM_INIT: Once = Once::new();
 
 static CONNECTION: Mutex<Option<TcpStream>> = Mutex::new(None);
 
-const ADDRESS: &str = "127.0.0.1:6969";
+const ADDRESS: &str = "127.0.0.1:5050";
 
 pub fn start_rapl(id: impl AsRef<str>) {
     let packet = ProcessUnderTestPacket {
