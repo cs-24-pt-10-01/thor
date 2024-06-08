@@ -1,10 +1,9 @@
 use crate::{
     build::GitBuild,
-    component_def::{Build, Listener, Measurement, StartProcess},
+    component_def::{Build, Listener, Measurement},
 };
 use anyhow::Result;
 use crossbeam::queue::SegQueue;
-use serde_json;
 use std::{
     collections::VecDeque,
     io::Write,
@@ -34,10 +33,8 @@ const MAX_REPO_SIZE: usize = 1024;
 const MEASUREMENTS_DELIMITER: &[u8] = "end".as_bytes();
 
 impl Listener<(RaplMeasurementJoules, u32)> for ListenerImplem {
-    fn start_listening<S: StartProcess, B: Build, M: Measurement<(RaplMeasurementJoules, u32)>>(
+    fn start_listening<M: Measurement<(RaplMeasurementJoules, u32)>>(
         &self,
-        start_process: S,
-        builder: B,
         measurement: &mut M,
     ) -> Result<()> {
         // Creating vector of streams

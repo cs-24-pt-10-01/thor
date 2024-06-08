@@ -13,15 +13,6 @@ pub trait Build {
     fn build(&self, repo: String) -> Result<(), io::Error>; // returns whether it succeded
 }
 
-pub trait StartProcess {
-    fn start_process(&self, process: String) -> bool; // returns whether it succeded
-}
-
 pub trait Listener<T> {
-    fn start_listening<S: StartProcess, B: Build, M: Measurement<T>>(
-        &self,
-        start_process: S,
-        builder: B,
-        measurement: &mut M,
-    ) -> Result<()>;
+    fn start_listening<M: Measurement<T>>(&self, measurement: &mut M) -> Result<()>;
 }
